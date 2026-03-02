@@ -363,8 +363,31 @@ class Admin(UserMixin):
 
     @staticmethod
     def find_by_username(username):
+        print(f"[ADMIN_LOOKUP] Finding admin with username: '{username}' (type: {type(username).__name__})")
+        
+        # Method 1: Try query_db with filter
         admins = query_db('admin', username=username)
-        return Admin(admins[0]) if admins else None
+        print(f"[ADMIN_LOOKUP] query_db returned: {len(admins) if isinstance(admins, list) else 'not a list'} results")
+        
+        if admins and len(admins) > 0:
+            print(f"[ADMIN_LOOKUP] Found via query_db: {admins[0].get('username')}")
+            return Admin(admins[0])
+        
+        # Method 2: Fallback - get all admins and search manually
+        print(f"[ADMIN_LOOKUP] Fallback: getting all admins from database")
+        all_admins = get_from_db('admin')
+        print(f"[ADMIN_LOOKUP] All admins count: {len(all_admins) if isinstance(all_admins, list) else 0}")
+        
+        if isinstance(all_admins, list) and len(all_admins) > 0:
+            for admin_data in all_admins:
+                if admin_data and admin_data.get('username') == username:
+                    print(f"[ADMIN_LOOKUP] Found via fallback search: {admin_data.get('username')}")
+                    return Admin(admin_data)
+                elif admin_data:
+                    print(f"[ADMIN_LOOKUP] Checking admin: '{admin_data.get('username')}' vs '{username}' - Match: {admin_data.get('username') == username}")
+        
+        print(f"[ADMIN_LOOKUP] Admin with username '{username}' not found")
+        return None
 
     @staticmethod
     def find_by_id(admin_id):
