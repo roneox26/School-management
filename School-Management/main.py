@@ -3018,6 +3018,17 @@ def init_app():
             admin.email = 'admin@school.com'
             admin.password_hash = generate_password_hash('password123')
             admin.save()
+            print(f"[INIT_APP] Created new admin with username: admin")
+        else:
+            # Check if admin has wrong username (legacy '7')
+            if isinstance(admins, list) and len(admins) > 0:
+                legacy_admin = admins[0]
+                if legacy_admin.get('username') == '7':
+                    print(f"[INIT_APP] Found legacy admin with username '7', updating to 'admin'")
+                    legacy_admin['username'] = 'admin'
+                    legacy_admin['password_hash'] = generate_password_hash('password123')
+                    update_in_db('admin', legacy_admin['id'], legacy_admin)
+                    print(f"[INIT_APP] Updated legacy admin to username: admin")
 
             # Create default teachers
             default_teachers = [
