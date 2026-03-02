@@ -1,0 +1,53 @@
+run =  ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
+entrypoint = "main.py"
+modules = ["python-3.11"]
+
+hidden = [".pythonlibs"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["cargo", "freetype", "glibcLocales", "libiconv", "rustc"]
+
+[deployment]
+run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Development Server"
+author = 36401567
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Run Flask App"
+
+[[workflows.workflow]]
+name = "Run Flask App"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 5000
+
+[agent]
+expertMode = true

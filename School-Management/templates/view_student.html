@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block page_title %}Student Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-user me-2"></i>Student Details</h4>
+    <div>
+        <a href="{{ url_for('edit_student', student_id=student.id) }}" class="btn btn-warning me-2">
+            <i class="fas fa-edit me-2"></i>Edit Student
+        </a>
+        <a href="{{ url_for('students') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Students
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-custom text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Name:</strong> {{ student.name }}</p>
+                        <p><strong>Roll Number:</strong> {{ student.roll_number }}</p>
+                        <p><strong>Class:</strong> {{ student.class_name or 'Not Assigned' }}</p>
+                        <p><strong>Date of Birth:</strong> {{ student.date_of_birth or 'Not provided' }}</p>
+                        <p><strong>Phone:</strong> {{ student.phone }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Email:</strong> {{ student.email or 'Not provided' }}</p>
+                        <p><strong>Guardian Name:</strong> {{ student.guardian_name }}</p>
+                        <p><strong>Guardian Phone:</strong> {{ student.guardian_phone }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge bg-{{ 'success' if student.is_active else 'danger' }}">
+                                {{ 'Active' if student.is_active else 'Inactive' }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                {% if student.address %}
+                <div class="row">
+                    <div class="col-12">
+                        <p><strong>Address:</strong><br>{{ student.address }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Fees Information -->
+        {% if fees %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-money-bill me-2"></i>Fee Records</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fee Type</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fee in fees %}
+                            <tr>
+                                <td>{{ fee.fee_type }}</td>
+                                <td>৳{{ fee.amount }}</td>
+                                <td>{{ fee.due_date }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if fee.is_paid else 'warning' }}">
+                                        {{ 'Paid' if fee.is_paid else 'Pending' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Attendance Information -->
+        {% if attendance %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-calendar-check me-2"></i>Recent Attendance</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance %}
+                            <tr>
+                                <td>{{ record.date }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if record.status == 'Present' else 'danger' }}">
+                                        {{ record.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('edit_student', student_id=student.id) }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit me-2"></i>Edit Information
+                    </a>
+                    <button class="btn btn-info btn-sm" onclick="sendSMS('{{ student.guardian_phone }}', '{{ student.name }}')">
+                        <i class="fas fa-sms me-2"></i>Send SMS
+                    </button>
+                    <a href="{{ url_for('add_fee') }}?student_id={{ student.id }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus me-2"></i>Add Fee
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Summary</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Total Fees:</strong> ৳{{ fees|sum(attribute='amount') if fees else 0 }}</p>
+                <p class="mb-2"><strong>Paid Fees:</strong> ৳{{ fees|selectattr('is_paid')|sum(attribute='amount') if fees else 0 }}</p>
+                <p class="mb-0"><strong>Recent Attendance:</strong> {{ attendance|selectattr('status', 'equalto', 'Present')|list|length }}/{{ attendance|length if attendance else 0 }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function sendSMS(phone, name) {
+    if(confirm(`Send SMS to ${name} (${phone})?`)) {
+        alert('SMS functionality will be implemented');
+    }
+}
+</script>
+{% endblock %}

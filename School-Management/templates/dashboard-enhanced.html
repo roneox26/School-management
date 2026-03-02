@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    .stat-card h4 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+
+    .stat-card p {
+        font-size: 0.95rem;
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .stat-card .icon-container {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    }
+
+    .stat-card:hover .icon-container {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .fee-box {
+        padding: 1.5rem;
+        border-radius: 1rem;
+        text-align: center;
+    }
+
+    .fee-box h6 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .fee-box h4 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .fee-collected {
+        background: linear-gradient(135deg, rgba(86, 171, 47, 0.1) 0%, rgba(168, 230, 207, 0.1) 100%);
+    }
+
+    .fee-collected h6 {
+        color: #2d5016;
+    }
+
+    .fee-collected h4 {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .fee-pending {
+        background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%);
+    }
+
+    .fee-pending h6 {
+        color: #7d3c47;
+    }
+
+    .fee-pending h4 {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .attendance-box {
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .attendance-box h4 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+    }
+
+    .sms-log-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .sms-log-item:hover {
+        background: #f8fafc;
+        padding-left: 1.5rem;
+    }
+
+    .sms-log-item:last-child {
+        border-bottom: none;
+    }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+
+    .quick-action-btn {
+        padding: 1rem;
+        border-radius: 1rem;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        color: white;
+    }
+
+    .quick-action-btn i {
+        font-size: 1.5rem;
+    }
+
+    .quick-action-btn:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .recent-items-container {
+        max-height: 350px;
+        overflow-y: auto;
+    }
+
+    .recent-items-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .recent-items-container::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+
+    .recent-items-container::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .fee-box {
+            padding: 1rem;
+        }
+
+        .stat-card h4 {
+            font-size: 1.75rem;
+        }
+
+        .quick-actions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<!-- Statistics Cards -->
+<div class="dashboard-grid">
+    <div class="card stat-card fade-in">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h4>{{ total_students }}</h4>
+                    <p class="mb-0">Total Students</p>
+                </div>
+                <div class="icon-container">
+                    <i class="fas fa-users fa-xl" style="color: #667eea;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card stat-card fade-in" style="animation-delay: 0.1s;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h4>{{ total_teachers }}</h4>
+                    <p class="mb-0">Total Teachers</p>
+                </div>
+                <div class="icon-container">
+                    <i class="fas fa-chalkboard-user fa-xl" style="color: #f5576c;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card stat-card fade-in" style="animation-delay: 0.2s;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h4>{{ total_classes }}</h4>
+                    <p class="mb-0">Total Classes</p>
+                </div>
+                <div class="icon-container">
+                    <i class="fas fa-school fa-xl" style="color: #56ab2f;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card stat-card fade-in" style="animation-delay: 0.3s;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h4>{{ attendance_percentage }}%</h4>
+                    <p class="mb-0">Today's Attendance</p>
+                </div>
+                <div class="icon-container">
+                    <i class="fas fa-calendar-check fa-xl" style="color: #4facfe;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fee & Attendance Section -->
+<div class="row mb-4 g-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-money-bill-wave me-2"></i>Fee Collection</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="fee-box fee-collected rounded-lg">
+                            <h6>Collected</h6>
+                            <h4>৳{{ "{:,.0f}".format(collected_fees) }}</h4>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="fee-box fee-pending rounded-lg">
+                            <h6>Pending</h6>
+                            <h4>৳{{ "{:,.0f}".format(total_fees - collected_fees) }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" style="width: {{ (collected_fees / total_fees * 100) if total_fees > 0 else 0 }}%"></div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        {{ "%.1f"|format((collected_fees / total_fees * 100) if total_fees > 0 else 0) }}% collected
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-user-check me-2"></i>Teacher Attendance</h5>
+            </div>
+            <div class="card-body">
+                <div class="attendance-box">
+                    <h4>{{ teacher_attendance_percentage }}%</h4>
+                    <p class="text-muted mb-0">Today's Teacher Attendance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row g-4">
+    <!-- Recent SMS -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-sms me-2"></i>Recent SMS</h5>
+            </div>
+            <div class="card-body recent-items-container">
+                {% if recent_sms %}
+                    {% for sms in recent_sms %}
+                    <div class="sms-log-item">
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block">{{ sms.phone_number }}</small>
+                            <p class="mb-0 small" title="{{ sms.message }}">
+                                {{ sms.message[:50] }}{% if sms.message|length > 50 %}...{% endif %}
+                            </p>
+                        </div>
+                        <span class="badge badge-{% if sms.status == 'sent' %}success{% else %}danger{% endif %} ms-2">
+                            {{ sms.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-sms fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
+                        <p class="text-muted mb-0">No SMS sent yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="quick-actions">
+                    <a href="{{ url_for('add_student') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" title="Add Student">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Add Student</span>
+                    </a>
+                    <a href="{{ url_for('students') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);" title="View Students">
+                        <i class="fas fa-users"></i>
+                        <span>Students</span>
+                    </a>
+                    <a href="{{ url_for('add_teacher') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);" title="Add Teacher">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Add Teacher</span>
+                    </a>
+                    <a href="{{ url_for('teachers') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);" title="View Teachers">
+                        <i class="fas fa-chalkboard-user"></i>
+                        <span>Teachers</span>
+                    </a>
+                    <a href="{{ url_for('add_exam') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #ffa502 0%, #ffb733 100%);" title="Add Exam">
+                        <i class="fas fa-file-import"></i>
+                        <span>Add Exam</span>
+                    </a>
+                    <a href="{{ url_for('exams') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #ff6b6b 0%, #ff5555 100%);" title="View Exams">
+                        <i class="fas fa-flask"></i>
+                        <span>Exams</span>
+                    </a>
+                    <a href="{{ url_for('fees') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #a8dadc 0%, #457b9d 100%);" title="Manage Fees">
+                        <i class="fas fa-money-bill"></i>
+                        <span>Fees</span>
+                    </a>
+                    <a href="{{ url_for('attendance') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #d4a574 0%, #a67c52 100%);" title="Attendance">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Attendance</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

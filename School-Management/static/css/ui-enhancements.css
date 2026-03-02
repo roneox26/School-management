@@ -1,0 +1,950 @@
+/* ============================================
+   SCHOOL MANAGEMENT SYSTEM - UI ENHANCEMENTS
+   Modern, Polished Design Improvements
+   ============================================ */
+
+/* ============================================
+   1. ENHANCED STAT CARDS & DASHBOARD ELEMENTS
+   ============================================ */
+
+.stat-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(10px);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+.stat-card h4 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-card p {
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+.stat-card i {
+    color: #667eea;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover i {
+    opacity: 1;
+    color: #764ba2;
+    transform: scale(1.1);
+}
+
+/* Dashboard Cards Enhancement */
+.card {
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    backdrop-filter: blur(10px);
+}
+
+.card:hover {
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+    transform: translateY(-4px);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 1rem 1rem 0 0;
+    padding: 1.5rem;
+    font-weight: 600;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* ============================================
+   2. ENHANCED FORM STYLING
+   ============================================ */
+
+.form-control {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: #ffffff;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+    background-color: #ffffff;
+}
+
+.form-control::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-label .required {
+    color: #ff416c;
+    font-weight: 700;
+}
+
+/* Form Group Styling */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Input Validation Feedback */
+.form-control.is-invalid {
+    border-color: #ff416c;
+    background-image: none;
+}
+
+.form-control.is-invalid:focus {
+    border-color: #ff416c;
+    box-shadow: 0 0 0 3px rgba(255, 65, 108, 0.1);
+}
+
+.form-control.is-valid {
+    border-color: #56ab2f;
+    background-image: none;
+}
+
+.form-control.is-valid:focus {
+    border-color: #56ab2f;
+    box-shadow: 0 0 0 3px rgba(86, 171, 47, 0.1);
+}
+
+.invalid-feedback {
+    color: #ff416c;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.invalid-feedback::before {
+    content: '✕';
+    font-weight: 700;
+}
+
+.valid-feedback {
+    color: #56ab2f;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.valid-feedback::before {
+    content: '✓';
+    font-weight: 700;
+}
+
+/* Select Dropdown Styling */
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+}
+
+select.form-control:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+/* Textarea Styling */
+textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+    font-family: 'Inter', monospace;
+}
+
+textarea.form-control:focus {
+    border-color: #667eea;
+}
+
+/* ============================================
+   3. ENHANCED BUTTONS
+   ============================================ */
+
+.btn {
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    color: white;
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(240, 147, 251, 0.6);
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4);
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(86, 171, 47, 0.6);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 65, 108, 0.6);
+    color: white;
+}
+
+.btn-outline-primary {
+    border: 2px solid #667eea;
+    color: #667eea;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* ============================================
+   4. ENHANCED TABLE STYLING
+   ============================================ */
+
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #ffffff;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 1.25rem 1rem;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+}
+
+.table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.table tbody tr:hover {
+    background-color: #f8fafc;
+    box-shadow: inset 0 0 0 1px rgba(102, 126, 234, 0.1);
+}
+
+.table tbody td {
+    padding: 1.25rem 1rem;
+    color: #1e293b;
+    vertical-align: middle;
+    font-size: 0.95rem;
+}
+
+/* Striped Rows */
+.table-striped tbody tr:nth-child(odd) {
+    background-color: #f8fafc;
+}
+
+.table-striped tbody tr:nth-child(odd):hover {
+    background-color: #f1f5f9;
+}
+
+/* Status Badges in Tables */
+.badge {
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-success {
+    background: linear-gradient(135deg, rgba(86, 171, 47, 0.2) 0%, rgba(168, 230, 207, 0.2) 100%);
+    color: #2d5016;
+    border: 1px solid rgba(86, 171, 47, 0.3);
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, rgba(255, 65, 108, 0.2) 0%, rgba(255, 75, 43, 0.2) 100%);
+    color: #7d1d25;
+    border: 1px solid rgba(255, 65, 108, 0.3);
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, rgba(240, 147, 251, 0.2) 0%, rgba(245, 87, 108, 0.2) 100%);
+    color: #7d3c47;
+    border: 1px solid rgba(240, 147, 251, 0.3);
+}
+
+.badge-info {
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.2) 0%, rgba(0, 242, 254, 0.2) 100%);
+    color: #0c4a6e;
+    border: 1px solid rgba(79, 172, 254, 0.3);
+}
+
+/* ============================================
+   5. ENHANCED ANIMATIONS & TRANSITIONS
+   ============================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.5s ease-out;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.5s ease-out;
+}
+
+.pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.bounce {
+    animation: bounce 1s ease-in-out infinite;
+}
+
+/* Loading Skeleton */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+    border-radius: 0.5rem;
+}
+
+/* ============================================
+   6. ENHANCED ALERTS & NOTIFICATIONS
+   ============================================ */
+
+.alert {
+    border: none;
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    animation: slideInRight 0.3s ease-out;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.alert-success {
+    background: linear-gradient(135deg, rgba(86, 171, 47, 0.1) 0%, rgba(168, 230, 207, 0.1) 100%);
+    color: #2d5016;
+    border-left: 4px solid #56ab2f;
+}
+
+.alert-success .alert-icon {
+    color: #56ab2f;
+    font-weight: 700;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, rgba(255, 65, 108, 0.1) 0%, rgba(255, 75, 43, 0.1) 100%);
+    color: #7d1d25;
+    border-left: 4px solid #ff416c;
+}
+
+.alert-danger .alert-icon {
+    color: #ff416c;
+    font-weight: 700;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%);
+    color: #7d3c47;
+    border-left: 4px solid #f093fb;
+}
+
+.alert-warning .alert-icon {
+    color: #f093fb;
+    font-weight: 700;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
+    color: #0c4a6e;
+    border-left: 4px solid #4facfe;
+}
+
+.alert-info .alert-icon {
+    color: #4facfe;
+    font-weight: 700;
+}
+
+.alert-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+}
+
+.alert-close {
+    background: transparent;
+    border: none;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+    font-size: 1.5rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    transition: opacity 0.2s ease;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+/* ============================================
+   7. MODAL & DIALOG ENHANCEMENTS
+   ============================================ */
+
+.modal-content {
+    border: none;
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 1.25rem 1.25rem 0 0;
+    padding: 1.75rem;
+}
+
+.modal-header h5 {
+    font-weight: 700;
+    margin: 0;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    border: none;
+    padding: 1.5rem 2rem;
+    background: #f8fafc;
+    border-radius: 0 0 1.25rem 1.25rem;
+}
+
+/* ============================================
+   8. PROGRESS BAR ENHANCEMENTS
+   ============================================ */
+
+.progress {
+    height: 0.75rem;
+    border-radius: 50px;
+    background: #e2e8f0;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.6s ease;
+    position: relative;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* ============================================
+   9. ENHANCED BADGES & TAGS
+   ============================================ */
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    color: #667eea;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    transition: all 0.3s ease;
+}
+
+.tag:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    border-color: rgba(102, 126, 234, 0.4);
+}
+
+/* ============================================
+   10. RESPONSIVE DESIGN ENHANCEMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+    .stat-card {
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-card h4 {
+        font-size: 1.75rem;
+    }
+
+    .btn {
+        padding: 0.65rem 1.25rem;
+        font-size: 0.95rem;
+    }
+
+    .table {
+        font-size: 0.9rem;
+    }
+
+    .table thead th,
+    .table tbody td {
+        padding: 1rem 0.75rem;
+    }
+
+    .alert {
+        padding: 1rem 1.25rem;
+        gap: 0.75rem;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 1.25rem;
+    }
+
+    .card {
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        padding: 1.25rem;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-card h4 {
+        font-size: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .form-label {
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        font-size: 1rem;
+        padding: 0.7rem 0.9rem;
+    }
+
+    .table {
+        font-size: 0.85rem;
+    }
+
+    .table thead th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .alert {
+        padding: 0.9rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* ============================================
+   11. ACCESSIBILITY ENHANCEMENTS
+   ============================================ */
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+}
+
+/* ============================================
+   12. UTILITY CLASSES
+   ============================================ */
+
+.shadow-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+}
+
+.shadow {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1) !important;
+}
+
+.shadow-xl {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1) !important;
+}
+
+.rounded {
+    border-radius: 0.75rem !important;
+}
+
+.rounded-lg {
+    border-radius: 1rem !important;
+}
+
+.rounded-xl {
+    border-radius: 1.5rem !important;
+}
+
+.gap-1 {
+    gap: 0.5rem !important;
+}
+
+.gap-2 {
+    gap: 1rem !important;
+}
+
+.gap-3 {
+    gap: 1.5rem !important;
+}
+
+.opacity-50 {
+    opacity: 0.5 !important;
+}
+
+.opacity-75 {
+    opacity: 0.75 !important;
+}
+
+.transition {
+    transition: all 0.3s ease !important;
+}
+
+.transition-fast {
+    transition: all 0.15s ease !important;
+}
+
+.transition-slow {
+    transition: all 0.5s ease !important;
+}
+
+/* ============================================
+   13. DARK MODE SUPPORT (Optional)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: #e2e8f0;
+    }
+
+    .card,
+    .stat-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+        border-color: rgba(102, 126, 234, 0.2);
+    }
+
+    .card:hover,
+    .stat-card:hover {
+        box-shadow: 0 12px 40px rgba(102, 126, 234, 0.15);
+    }
+
+    .form-control {
+        background-color: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+
+    .form-control:focus {
+        background-color: #1e293b;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .table {
+        background: #1e293b;
+    }
+
+    .table tbody tr:hover {
+        background-color: #334155;
+    }
+
+    .table-striped tbody tr:nth-child(odd) {
+        background-color: #0f172a;
+    }
+
+    .alert {
+        color: #e2e8f0;
+    }
+}

@@ -1,0 +1,188 @@
+
+{% extends "base.html" %}
+
+{% block title %}Admin Login - School Management{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; overflow: hidden;">
+    
+    <!-- Decorative shapes -->
+    <div style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%; pointer-events: none;"></div>
+    <div style="position: absolute; bottom: -100px; left: 10%; width: 400px; height: 400px; background: rgba(255,255,255,0.08); border-radius: 50%; pointer-events: none;"></div>
+    
+    <div style="position: relative; z-index: 1; width: 100%; max-width: 450px; padding: 2rem;">
+        
+        <!-- Login Card -->
+        <div style="background: white; border-radius: 1.5rem; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 3rem; overflow: hidden; position: relative;">
+            
+            <!-- Card background decoration -->
+            <div style="position: absolute; top: 0; right: 0; width: 150px; height: 150px; background: linear-gradient(135deg, #a8e6cf 0%, #87ceeb 100%); opacity: 0.1; border-radius: 50%; pointer-events: none;"></div>
+            
+            <div style="position: relative; z-index: 1;">
+                
+                <!-- Header -->
+                <div style="text-align: center; margin-bottom: 2.5rem;">
+                    <div style="font-size: 3.5rem; margin-bottom: 1rem;">🏫</div>
+                    <h1 style="font-size: 1.875rem; font-weight: 700; color: #2d3748; margin-bottom: 0.5rem;">Excellence Academy</h1>
+                    <p style="color: #718096; margin: 0;">Management System</p>
+                </div>
+
+                <!-- Login Form -->
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Username Field -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;">
+                            <i class="fas fa-user" style="margin-right: 0.5rem; color: #667eea;"></i>
+                            {{ form.username.label.text }}
+                        </label>
+                        {{ form.username(
+                            class="form-control",
+                            style="border: 2px solid #e2e8f0; padding: 0.875rem 1rem; border-radius: 0.75rem; font-size: 1rem; transition: all 0.3s ease;",
+                            placeholder="Enter your username"
+                        ) }}
+                        {% if form.username.errors %}
+                            <small style="color: #ff6b6b; margin-top: 0.5rem; display: block;">
+                                {% for error in form.username.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password Field -->
+                    <div style="margin-bottom: 2rem;">
+                        <label style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;">
+                            <i class="fas fa-lock" style="margin-right: 0.5rem; color: #667eea;"></i>
+                            {{ form.password.label.text }}
+                        </label>
+                        {{ form.password(
+                            class="form-control",
+                            style="border: 2px solid #e2e8f0; padding: 0.875rem 1rem; border-radius: 0.75rem; font-size: 1rem; transition: all 0.3s ease;",
+                            placeholder="Enter your password"
+                        ) }}
+                        {% if form.password.errors %}
+                            <small style="color: #ff6b6b; margin-top: 0.5rem; display: block;">
+                                {% for error in form.password.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 1rem; border-radius: 0.75rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); margin-bottom: 1rem;" 
+                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)';"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)';">
+                        <i class="fas fa-sign-in-alt" style="margin-right: 0.5rem;"></i> Sign In
+                    </button>
+                </form>
+
+                <!-- Divider -->
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                    <span style="color: #a0aec0; font-size: 0.875rem;">or</span>
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                </div>
+
+                <!-- Demo Credentials -->
+                <div style="background: #f7fafc; border-radius: 0.75rem; padding: 1.25rem; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.875rem; color: #718096; margin: 0 0 0.75rem 0; font-weight: 500;">
+                        <i class="fas fa-info-circle" style="margin-right: 0.5rem; color: #667eea;"></i>Demo Credentials:
+                    </p>
+                    <div style="font-family: 'Courier New', monospace; background: white; padding: 0.75rem; border-radius: 0.5rem; font-size: 0.875rem;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="color: #a0aec0;">Username:</span> <span style="color: #2d3748; font-weight: 600;">admin</span>
+                        </div>
+                        <div>
+                            <span style="color: #a0aec0;">Password:</span> <span style="color: #2d3748; font-weight: 600;">password123</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div style="background: {% if category == 'error' %}#ffe6e6{% else %}#e6ffed{% endif %}; 
+                                        border-left: 4px solid {% if category == 'error' %}#ff6b6b{% else %}#51cf66{% endif %}; 
+                                        padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; color: {% if category == 'error' %}#ff6b6b{% else %}#51cf66{% endif %};">
+                                <i class="fas fa-{% if category == 'error' %}exclamation-circle{% else %}check-circle{% endif %}" style="margin-right: 0.5rem;"></i>
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Footer Info -->
+                <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                    <p style="color: #718096; font-size: 0.875rem; margin: 0;">
+                        Need help? Contact <a href="mailto:support@school.edu" style="color: #667eea; text-decoration: none; font-weight: 600;">support@school.edu</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Text -->
+        <p style="text-align: center; color: rgba(255,255,255,0.8); font-size: 0.875rem; margin-top: 2rem;">
+            School Management System v2.0 &copy; 2024
+        </p>
+    </div>
+</div>
+
+<style>
+    input.form-control {
+        transition: all 0.3s ease !important;
+        background-color: #fff !important;
+    }
+
+    input.form-control:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+        outline: none !important;
+        background-color: #fff !important;
+    }
+
+    @media (max-width: 768px) {
+        div[style*="max-width: 450px"] {
+            padding: 1rem !important;
+        }
+
+        div[style*="padding: 3rem"] {
+            padding: 1.5rem !important;
+        }
+
+        div[style*="font-size: 3.5rem"] {
+            font-size: 2.5rem !important;
+        }
+
+        div[style*="font-size: 1.875rem"] {
+            font-size: 1.5rem !important;
+        }
+
+        button[type="submit"] {
+            padding: 0.875rem !important;
+            font-size: 0.95rem !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        div[style*="max-width: 450px"] {
+            padding: 0.5rem !important;
+        }
+
+        div[style*="padding: 3rem"] {
+            padding: 1.25rem !important;
+        }
+
+        div[style*="font-size: 3.5rem"] {
+            font-size: 2rem !important;
+        }
+
+        div[style*="font-size: 1.875rem"] {
+            font-size: 1.25rem !important;
+        }
+    }
+</style>
+{% endblock %}

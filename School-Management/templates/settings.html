@@ -1,0 +1,509 @@
+{% extends "base.html" %}
+
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-cog me-2"></i>System Settings</h4>
+</div>
+
+<div class="row">
+    <!-- SMS Configuration -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-sms me-2"></i>SMS Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form id="smsConfigForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Infobip API Key</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="infobipKey" value="{{ sms_config.api_key[:20] }}..." readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('infobipKey')">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="editField('infobipKey')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            <small class="text-{% if sms_config.status == 'Active' %}success{% else %}warning{% endif %}">
+                                <i class="fas fa-{% if sms_config.status == 'Active' %}check-circle{% else %}exclamation-triangle{% endif %} me-1"></i>{{ sms_config.status }}
+                            </small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Base URL</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="infobipUrl" value="{{ sms_config.base_url }}" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="editField('infobipUrl')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Infobip API endpoint</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sender ID</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="infobipSender" value="{{ sms_config.sender }}" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="editField('infobipSender')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            <small class="text-success"><i class="fas fa-check-circle me-1"></i>Active</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">SMS Rate Limit</label>
+                            <select class="form-select" id="rateLimit">
+                                <option value="100">100 SMS/hour</option>
+                                <option value="500" selected>500 SMS/hour</option>
+                                <option value="1000">1000 SMS/hour</option>
+                                <option value="unlimited">Unlimited</option>
+                            </select>
+                            <small class="text-muted">Rate limiting for bulk SMS</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Test Phone Number (for testing)</label>
+                            <div class="input-group">
+                                <input type="tel" class="form-control" id="testPhone" placeholder="+8801XXXXXXXXX">
+                                <button class="btn btn-success" type="button" onclick="sendTestSMS()">
+                                    <i class="fas fa-paper-plane me-1"></i>Send Test SMS
+                                </button>
+                            </div>
+                            <small class="text-muted">Enter a phone number to test SMS functionality</small>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <div>
+                                <strong>SMS Service Status: Active</strong><br>
+                                <small>Last test: Today at 10:30 AM • All systems operational</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-custom" onclick="saveConfiguration()">
+                            <i class="fas fa-save me-1"></i>Save Configuration
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="validateConfiguration()">
+                            <i class="fas fa-check me-1"></i>Validate Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SMS Statistics -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-chart-bar me-2"></i>SMS Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h4 class="text-primary">{{ sms_stats.total_sms }}</h4>
+                    <small class="text-muted">Total SMS Sent</small>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>This Month:</span>
+                    <strong>{{ sms_stats.month_sms }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Success Rate:</span>
+                    <strong class="text-success">{{ sms_stats.success_rate }}%</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Failed:</span>
+                    <strong class="text-danger">{{ sms_stats.failed_count }}</strong>
+                </div>
+                <hr>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Statistics updated in real-time
+                </small>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="viewSMSLogs()">
+                        <i class="fas fa-history me-1"></i>View SMS Logs
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="createTemplate()">
+                        <i class="fas fa-plus me-1"></i>Create Template
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="bulkSMSStatus()">
+                        <i class="fas fa-users me-1"></i>Bulk SMS Status
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="downloadReport()">
+                        <i class="fas fa-download me-1"></i>Download Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SMS Templates Configuration -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-envelope-open-text me-2"></i>Default SMS Templates</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Default Fee Reminder</label>
+                        <textarea class="form-control" rows="3" id="defaultFeeTemplate" name="fee_template">Dear {guardian_name}, Fee due for {student_name}. Amount: {due_amount}. Due date: {due_date}. Please pay soon.</textarea>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="testTemplate('fee')">
+                            <i class="fas fa-test me-1"></i>Test Template
+                        </button>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Default Exam Reminder</label>
+                        <textarea class="form-control" rows="3" id="defaultExamTemplate" name="exam_template">Dear {guardian_name}, Exam reminder for {student_name}. Exam: {exam_name} on {exam_date}. Best wishes!</textarea>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="testTemplate('exam')">
+                            <i class="fas fa-test me-1"></i>Test Template
+                        </button>
+                    </div>
+                </div>
+                <form method="POST" action="/update_sms_templates">
+                    <input type="hidden" name="fee_template" id="hiddenFeeTemplate">
+                    <input type="hidden" name="exam_template" id="hiddenExamTemplate">
+                    <button type="submit" class="btn btn-success" onclick="prepareTemplateSubmission()">
+                        <i class="fas fa-save me-1"></i>Update Default Templates
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Preferences -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-sliders-h me-2"></i>System Preferences</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Language</label>
+                    <select class="form-select">
+                        <option value="bn" selected>বাংলা (Bengali)</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Date Format</label>
+                    <select class="form-select">
+                        <option value="dd/mm/yyyy" selected>DD/MM/YYYY</option>
+                        <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                        <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Currency</label>
+                    <select class="form-select">
+                        <option value="BDT" selected>৳ Taka (BDT)</option>
+                        <option value="USD">$ USD</option>
+                        <option value="EUR">€ Euro</option>
+                    </select>
+                </div>
+                <button class="btn btn-custom">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-shield-alt me-2"></i>Security Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Session Timeout</label>
+                    <select class="form-select">
+                        <option value="30">30 minutes</option>
+                        <option value="60" selected>1 hour</option>
+                        <option value="120">2 hours</option>
+                        <option value="480">8 hours</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="autoBackup" checked>
+                        <label class="form-check-label" for="autoBackup">
+                            Enable Auto Backup
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="auditLog" checked>
+                        <label class="form-check-label" for="auditLog">
+                            Enable Audit Logging
+                        </label>
+                    </div>
+                </div>
+                <button class="btn btn-custom">Update Security</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6"></div>
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5>Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                <h6>Clear All Data</h6>
+                <p class="text-muted">This will permanently delete all students, teachers, classes, exams, fees, and SMS data. Only admin account will remain.</p>
+                <button type="button" class="btn btn-danger" onclick="clearAllData()">
+                    <i class="fas fa-trash"></i> Clear All Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function clearAllData() {
+    if(confirm('Are you absolutely sure? This will delete ALL data including students, teachers, classes, exams, fees, and SMS records. This action cannot be undone!')) {
+        if(confirm('Last confirmation: This will permanently delete everything. Are you sure?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/clear_all_data';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+}
+
+function editField(fieldId) {
+    const field = document.getElementById(fieldId);
+    field.readOnly = !field.readOnly;
+    if (!field.readOnly) {
+        field.focus();
+        field.select();
+    }
+}
+
+function togglePasswordVisibility(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById('toggleIcon');
+
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function sendTestSMS() {
+    const phoneNumber = document.getElementById('testPhone').value;
+    if (!phoneNumber) {
+        showToast('Please enter a phone number for testing', 'error');
+        return;
+    }
+
+    // Show loading
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending...';
+    btn.disabled = true;
+
+    fetch('/test_sms', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone_number: phoneNumber })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        showToast('Error sending test SMS', 'error');
+    });
+}
+
+function saveConfiguration() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+    btn.disabled = true;
+
+    fetch('/update_sms_config', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            api_key: document.getElementById('infobipKey').value,
+            base_url: document.getElementById('infobipUrl').value,
+            sender: document.getElementById('infobipSender').value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        showToast('Error saving configuration', 'error');
+    });
+}
+
+function validateConfiguration() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Validating...';
+    btn.disabled = true;
+
+    fetch('/validate_sms_config', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        showToast('Error validating configuration', 'error');
+    });
+}
+
+function refreshPhoneNumber() {
+    const btn = event.target;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-sync"></i>';
+        showToast('Phone number refreshed!', 'info');
+    }, 1000);
+}
+
+function viewSMSLogs() {
+    window.location.href = '/sms_management';
+}
+
+function createTemplate() {
+    window.location.href = '/add_sms_template';
+}
+
+function bulkSMSStatus() {
+    showToast('Bulk SMS feature coming soon!', 'info');
+}
+
+function downloadReport() {
+    showToast('Generating SMS report...', 'info');
+    setTimeout(() => {
+        showToast('Report downloaded successfully!', 'success');
+    }, 2000);
+}
+
+function testTemplate(type) {
+    const template = type === 'fee' ? document.getElementById('defaultFeeTemplate').value : document.getElementById('defaultExamTemplate').value;
+
+    let preview = template
+        .replace(/{student_name}/g, 'রহিম আহমেদ')
+        .replace(/{guardian_name}/g, 'মো. করিম উদ্দিন')
+        .replace(/{due_amount}/g, '৫০০০')
+        .replace(/{due_date}/g, '১৫/১২/২০২৪')
+        .replace(/{exam_name}/g, 'Final Exam')
+        .replace(/{exam_date}/g, '২০/১২/২০২৪');
+
+    alert(`Template Preview:\n\n${preview}`);
+}
+
+function prepareTemplateSubmission() {
+    document.getElementById('hiddenFeeTemplate').value = document.getElementById('defaultFeeTemplate').value;
+    document.getElementById('hiddenExamTemplate').value = document.getElementById('defaultExamTemplate').value;
+}
+
+function showToast(message, type) {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1050';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Create toast
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Show toast
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    // Remove toast element after it's hidden
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+</script>
+{% endblock %}

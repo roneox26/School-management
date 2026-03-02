@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/improvements.css') }}">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-color: #667eea;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --surface-color: #ffffff;
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --radius-lg: 1rem;
+            --radius-xl: 1.5rem;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-card">
+            <div class="error-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="error-code">404</div>
+            <div class="error-title">Page Not Found</div>
+            <div class="error-message">
+                The page you're looking for doesn't exist or has been moved. 
+                Please check the URL and try again.
+            </div>
+            <div class="error-actions">
+                <a href="{{ url_for('index') }}" class="error-btn error-btn-primary">
+                    <i class="fas fa-home me-2"></i>Go Home
+                </a>
+                <button onclick="window.history.back()" class="error-btn error-btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+\u003c!-- Quick Links --\u003e
+\u003cdiv class="row g-3 mb-4"\u003e
+\u003cdiv class="col-md-4"\u003e
+\u003ca href="{{ url_for('dashboard') }}" class="btn btn-custom w-100"\u003e
+\u003ci class="fas fa-home me-2"\u003e\u003c/i\u003eGo to Dashboard
+\u003c/a\u003e
+\u003c/div\u003e
+\u003cdiv class="col-md-4"\u003e
+\u003ca href="{{ url_for('students') }}" class="btn btn-outline-primary w-100"\u003e
+\u003ci class="fas fa-user-graduate me-2"\u003e\u003c/i\u003eView Students
+\u003c/a\u003e
+\u003c/div\u003e
+\u003cdiv class="col-md-4"\u003e
+\u003ca href="{{ url_for('teachers') }}" class="btn btn-outline-info w-100"\u003e
+\u003ci class="fas fa-chalkboard-teacher me-2"\u003e\u003c/i\u003eView Teachers
+\u003c/a\u003e
+\u003c/div\u003e
+\u003c/div\u003e
+
+\u003c!-- Popular Pages --\u003e
+\u003cdiv class="text-start"\u003e
+\u003ch5 class="mb-3"\u003ePopular Pages:\u003c/h5\u003e
+\u003cul class="list-unstyled"\u003e
+\u003cli class="mb-2"\u003e
+\u003ca href="{{ url_for('attendance') }}" class="text-decoration-none"\u003e
+\u003ci class="fas fa-calendar-check text-success me-2"\u003e\u003c/i\u003eMark Attendance
+\u003c/a\u003e
+\u003c/li\u003e
+\u003cli class="mb-2"\u003e
+\u003ca href="{{ url_for('fees') }}" class="text-decoration-none"\u003e
+\u003ci class="fas fa-money-bill-wave text-warning me-2"\u003e\u003c/i\u003eManage Fees
+\u003c/a\u003e
+\u003c/li\u003e
+\u003cli class="mb-2"\u003e
+\u003ca href="{{ url_for('reports') }}" class="text-decoration-none"\u003e
+\u003ci class="fas fa-chart-bar text-info me-2"\u003e\u003c/i\u003eView Reports
+\u003c/a\u003e
+\u003c/li\u003e
+\u003cli class="mb-2"\u003e
+\u003ca href="{{ url_for('sms_management') }}" class="text-decoration-none"\u003e
+\u003ci class="fas fa-sms text-primary me-2"\u003e\u003c/i\u003eSend SMS
+\u003c/a\u003e
+\u003c/li\u003e
+\u003c/ul\u003e
+\u003c/div\u003e
+
+\u003c!-- Help Text --\u003e
+\u003cdiv class="alert alert-info mt-4"\u003e
+\u003ci class="fas fa-info-circle me-2"\u003e\u003c/i\u003e
+If you believe this is an error, please contact the system administrator.
+\u003c/div\u003e
+\u003c/div\u003e
+\u003c/div\u003e
+\u003c/div\u003e
+\u003c/div\u003e
+\u003c/div\u003e
+
+\u003cstyle\u003e
+@keyframes pulse {
+0%, 100% {
+transform: scale(1);
+opacity: 1;
+}
+50% {
+transform: scale(1.1);
+opacity: 0.8;
+}
+}
+
+.card {
+animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+from {
+opacity: 0;
+transform: translateY(20px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+\u003c/style\u003e
+
+\u003cscript\u003e
+document.getElementById('error404Search').addEventListener('keypress', function(e) {
+if (e.key === 'Enter') {
+const query = this.value;
+if (query.trim()) {
+window.location.href = '/smart_search?q=' + encodeURIComponent(query);
+}
+}
+});
+\u003c/script\u003e
