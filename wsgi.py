@@ -10,11 +10,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import and initialize the Flask app
-from main import app
+from main import app, init_db
 
 # Initialize the database on startup
-from main import init_app
-init_app()
+init_db()
 
 if __name__ == "__main__":
     app.run()
