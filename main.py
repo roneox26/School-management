@@ -3002,7 +3002,7 @@ def init_app():
             legacy_admin['username'] = 'admin'
             legacy_admin['password_hash'] = generate_password_hash('password123')
             update_in_db('admin', legacy_admin['id'], legacy_admin)
-            print(f"[INIT_APP] ✓ Successfully migrated admin to username: admin")
+            print(f"[INIT_APP] [OK] Successfully migrated admin to username: admin")
             # Clear cache to ensure new username is used
             clear_cache()
     
