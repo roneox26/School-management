@@ -2972,9 +2972,9 @@ def init_app():
         admins = get_from_db('admin')
         if not admins:
             admin = Admin()
-            admin.username = '7'
+            admin.username = 'admin'
             admin.email = 'admin@school.com'
-            admin.password_hash = generate_password_hash('pass')
+            admin.password_hash = generate_password_hash('password123')
             admin.save()
 
             # Create default teachers
