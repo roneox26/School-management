@@ -3005,11 +3005,32 @@ def can_delete_class(class_id):
 
 # Initialize database and create admin user if it hasn't been initialized yet
 def init_app():
-    # Check if already initialized
+    print("[INIT_APP] Starting init_app() function")
+    
+    # ALWAYS check for legacy admin migration (regardless of initialization flag)
+    admins = get_from_db('admin')
+    print(f"[INIT_APP] Admins found: {len(admins) if isinstance(admins, list) else 0}")
+    
+    if isinstance(admins, list) and len(admins) > 0:
+        legacy_admin = admins[0]
+        print(f"[INIT_APP] First admin username: '{legacy_admin.get('username')}'")
+        
+        # Migrate legacy admin with username '7' to 'admin'
+        if legacy_admin.get('username') == '7':
+            print(f"[INIT_APP] MIGRATING legacy admin from '7' to 'admin'")
+            legacy_admin['username'] = 'admin'
+            legacy_admin['password_hash'] = generate_password_hash('password123')
+            update_in_db('admin', legacy_admin['id'], legacy_admin)
+            print(f"[INIT_APP] ✓ Successfully migrated admin to username: admin")
+            # Clear cache to ensure new username is used
+            clear_cache()
+    
+    # Check if already initialized (original logic)
     with get_db_connection() as conn:
         row = conn.execute("SELECT id FROM app_data WHERE collection = 'metadata' AND id = 'initialized'").fetchone()
     
     if not row:
+        print("[INIT_APP] First time initialization - creating default data")
         # Create default admin if not exists
         admins = get_from_db('admin')
         if not admins:
@@ -3019,16 +3040,6 @@ def init_app():
             admin.password_hash = generate_password_hash('password123')
             admin.save()
             print(f"[INIT_APP] Created new admin with username: admin")
-        else:
-            # Check if admin has wrong username (legacy '7')
-            if isinstance(admins, list) and len(admins) > 0:
-                legacy_admin = admins[0]
-                if legacy_admin.get('username') == '7':
-                    print(f"[INIT_APP] Found legacy admin with username '7', updating to 'admin'")
-                    legacy_admin['username'] = 'admin'
-                    legacy_admin['password_hash'] = generate_password_hash('password123')
-                    update_in_db('admin', legacy_admin['id'], legacy_admin)
-                    print(f"[INIT_APP] Updated legacy admin to username: admin")
 
             # Create default teachers
             default_teachers = [
