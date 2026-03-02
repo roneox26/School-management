@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta, timezone
 import uuid
 import time
+import sys
 
 import requests
 # import pywhatkit as kit
@@ -116,54 +117,92 @@ def clear_cache(collection=None):
 
 # Helper functions for ReplDB
 
-# ==================== Database Setup (SQLite3) ====================
-DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'school_management.db')
+# ==================== Database Setup (SQLite3 + PostgreSQL Support) ====================
+# Determine which database to use
+DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_POSTGRES = DATABASE_URL and DATABASE_URL.startswith('postgresql')
+
+if USE_POSTGRES:
+    print("[INIT] Using PostgreSQL database")
+    DATABASE = None
+else:
+    DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'school_management.db')
+    print(f"[INIT] Using SQLite database: {DATABASE}")
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Get database connection (SQLite or PostgreSQL)"""
+    if USE_POSTGRES:
+        import psycopg2
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+    else:
+        conn = sqlite3.connect(DATABASE)
+        conn.row_factory = sqlite3.Row
+        return conn
 
-def init_sqlite_db():
+def init_db():
+    """Initialize database with appropriate schema"""
     try:
-        print(f"[INIT] Database path: {DATABASE}")
+        print(f"[INIT] Initializing database...")
         with get_db_connection() as conn:
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS app_data (
-                    collection TEXT,
-                    id TEXT,
-                    data TEXT,
-                    PRIMARY KEY (collection, id)
-                )
-            ''')
+            cursor = conn.cursor()
+            if USE_POSTGRES:
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS app_data (
+                        collection TEXT,
+                        id TEXT,
+                        data TEXT,
+                        PRIMARY KEY (collection, id)
+                    )
+                ''')
+            else:
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS app_data (
+                        collection TEXT,
+                        id TEXT,
+                        data TEXT,
+                        PRIMARY KEY (collection, id)
+                    )
+                ''')
             conn.commit()
         print(f"[INIT] Database initialized successfully")
         
         # Verify admin exists
         with get_db_connection() as conn:
-            admin_count = conn.execute('SELECT COUNT(*) as count FROM app_data WHERE collection="admin"').fetchone()
-            print(f"[INIT] Admin users in database: {admin_count['count']}")
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) as count FROM app_data WHERE collection=%s', ('admin',)) if USE_POSTGRES else cursor.execute('SELECT COUNT(*) as count FROM app_data WHERE collection="admin"')
+            admin_count = cursor.fetchone()
+            admin_users = admin_count[0] if USE_POSTGRES else admin_count['count']
+            print(f"[INIT] Admin users in database: {admin_users}")
     except Exception as e:
         print(f"Error initializing DB: {e}")
+        sys.exit(1)
 
 # Initialize DB on startup
-init_sqlite_db()
+init_db()
 # Clear cache on startup
 clear_cache()
 print("[INIT] Cache cleared on startup")
 
 # ==================== Database Helpers ====================
 def save_to_db(collection, data):
-    """Save data to SQLite with auto-generated ID"""
+    """Save data to database with auto-generated ID"""
     try:
         data_id = str(uuid.uuid4())
         data['id'] = data_id
         
         with get_db_connection() as conn:
-            conn.execute(
-                "INSERT INTO app_data (collection, id, data) VALUES (?, ?, ?)",
-                (collection, data_id, json.dumps(data))
-            )
+            cursor = conn.cursor()
+            if USE_POSTGRES:
+                cursor.execute(
+                    "INSERT INTO app_data (collection, id, data) VALUES (%s, %s, %s)",
+                    (collection, data_id, json.dumps(data))
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO app_data (collection, id, data) VALUES (?, ?, ?)",
+                    (collection, data_id, json.dumps(data))
+                )
             conn.commit()
             
         clear_cache(collection)
@@ -173,7 +212,7 @@ def save_to_db(collection, data):
         return None
 
 def get_from_db(collection, data_id=None):
-    """Get data from SQLite with caching"""
+    """Get data from database with caching"""
     try:
         cache_key = get_cache_key(collection, data_id)
         cached_data = get_cache(cache_key)
@@ -182,19 +221,40 @@ def get_from_db(collection, data_id=None):
 
         data = None
         with get_db_connection() as conn:
+            cursor = conn.cursor()
             if data_id:
-                row = conn.execute(
-                    "SELECT data FROM app_data WHERE collection = ? AND id = ?",
-                    (collection, data_id)
-                ).fetchone()
+                if USE_POSTGRES:
+                    cursor.execute(
+                        "SELECT data FROM app_data WHERE collection = %s AND id = %s",
+                        (collection, data_id)
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT data FROM app_data WHERE collection = ? AND id = ?",
+                        (collection, data_id)
+                    )
+                row = cursor.fetchone()
                 if row:
-                    data = json.loads(row['data'])
+                    if USE_POSTGRES:
+                        data = json.loads(row[0])
+                    else:
+                        data = json.loads(row['data'])
             else:
-                rows = conn.execute(
-                    "SELECT data FROM app_data WHERE collection = ?",
-                    (collection,)
-                ).fetchall()
-                data = [json.loads(row['data']) for row in rows]
+                if USE_POSTGRES:
+                    cursor.execute(
+                        "SELECT data FROM app_data WHERE collection = %s",
+                        (collection,)
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT data FROM app_data WHERE collection = ?",
+                        (collection,)
+                    )
+                rows = cursor.fetchall()
+                if USE_POSTGRES:
+                    data = [json.loads(row[0]) for row in rows]
+                else:
+                    data = [json.loads(row['data']) for row in rows]
 
         if data is not None:
             set_cache(cache_key, data)
@@ -204,14 +264,21 @@ def get_from_db(collection, data_id=None):
         return None if data_id else []
 
 def update_in_db(collection, data_id, data):
-    """Update data in SQLite"""
+    """Update data in database"""
     try:
         data['id'] = data_id
         with get_db_connection() as conn:
-            conn.execute(
-                "UPDATE app_data SET data = ? WHERE collection = ? AND id = ?",
-                (json.dumps(data), collection, data_id)
-            )
+            cursor = conn.cursor()
+            if USE_POSTGRES:
+                cursor.execute(
+                    "UPDATE app_data SET data = %s WHERE collection = %s AND id = %s",
+                    (json.dumps(data), collection, data_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE app_data SET data = ? WHERE collection = ? AND id = ?",
+                    (json.dumps(data), collection, data_id)
+                )
             conn.commit()
             
         clear_cache(collection)
@@ -221,13 +288,20 @@ def update_in_db(collection, data_id, data):
         return False
 
 def delete_from_db(collection, data_id):
-    """Delete data from SQLite"""
+    """Delete data from database"""
     try:
         with get_db_connection() as conn:
-            cursor = conn.execute(
-                "DELETE FROM app_data WHERE collection = ? AND id = ?",
-                (collection, data_id)
-            )
+            cursor = conn.cursor()
+            if USE_POSTGRES:
+                cursor.execute(
+                    "DELETE FROM app_data WHERE collection = %s AND id = %s",
+                    (collection, data_id)
+                )
+            else:
+                cursor.execute(
+                    "DELETE FROM app_data WHERE collection = ? AND id = ?",
+                    (collection, data_id)
+                )
             conn.commit()
             if cursor.rowcount > 0:
                 clear_cache(collection)

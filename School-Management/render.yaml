@@ -13,11 +13,17 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
-      - key: DATABASE_URL
-        value: sqlite:///school_management.db
       - key: MAIL_SERVER
         value: smtp.gmail.com
       - key: MAIL_PORT
         value: "587"
       - key: MAIL_USE_TLS
         value: "True"
+    envVarReferences:
+      DATABASE_URL: ${POSTGRES_DATABASE_URL}
+
+  - type: pserv
+    name: school-management-postgres
+    plan: free
+    ipAllowList: []
+    postgresMajorVersion: 15
