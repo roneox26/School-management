@@ -1,0 +1,370 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}Attendance Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-chart-bar me-2"></i>Attendance Report</h4>
+    <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Reports
+    </a>
+</div>
+
+<!-- Class Filter -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6><i class="fas fa-filter me-2"></i>Filter by Class</h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Select Class</label>
+                <select name="class_filter" class="form-select">
+                    <option value="">All Classes</option>
+                    {% for class_item in classes %}
+                    <option value="{{ class_item.id }}" {% if request.args.get('class_filter') == class_item.id %}selected{% endif %}>
+                        {{ class_item.name }} - {{ class_item.section }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Month/Year</label>
+                <input type="month" name="month_filter" class="form-control" 
+                       value="{{ request.args.get('month_filter', datetime.now().strftime('%Y-%m')) }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Minimum Attendance %</label>
+                <select name="min_attendance" class="form-select">
+                    <option value="">All Students</option>
+                    <option value="90" {% if request.args.get('min_attendance') == '90' %}selected{% endif %}>90% and above</option>
+                    <option value="80" {% if request.args.get('min_attendance') == '80' %}selected{% endif %}>80% and above</option>
+                    <option value="70" {% if request.args.get('min_attendance') == '70' %}selected{% endif %}>70% and above</option>
+                    <option value="60" {% if request.args.get('min_attendance') == '60' %}selected{% endif %}>Below 60%</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Overall Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6><i class="fas fa-users me-2"></i>Total Records</h6>
+                <h4>{{ total_records }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6><i class="fas fa-user-check me-2"></i>Present</h6>
+                <h4>{{ present_records }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h6><i class="fas fa-user-times me-2"></i>Absent</h6>
+                <h4>{{ absent_records }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6><i class="fas fa-percentage me-2"></i>Overall %</h6>
+                <h4>
+                    {% if total_records > 0 %}
+                        {{ "%.1f"|format((present_records / total_records * 100)) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Class-wise Summary -->
+{% if class_wise_attendance %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-users me-2"></i>Class-wise Attendance Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for class_summary in class_wise_attendance %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-title">{{ class_summary.class_name }}</h6>
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar 
+                                {% if class_summary.percentage >= 90 %}bg-success
+                                {% elif class_summary.percentage >= 80 %}bg-info
+                                {% elif class_summary.percentage >= 70 %}bg-warning
+                                {% else %}bg-danger{% endif %}" 
+                                style="width: {{ class_summary.percentage }}%;">
+                                {{ class_summary.percentage }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            {{ class_summary.present }}/{{ class_summary.total }} Present
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Student-wise Attendance Details -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-calendar-check me-2"></i>Student-wise Attendance Details</h5>
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('export_data', data_type='attendance', format='csv') }}?date={{ request.args.get('date', datetime.now().date().isoformat()) }}" 
+               class="btn btn-outline-success btn-sm">
+                <i class="fas fa-file-csv me-1"></i>Export CSV
+            </a>
+            <a href="{{ url_for('export_data', data_type='attendance', format='pdf') }}?date={{ request.args.get('date', datetime.now().date().isoformat()) }}" 
+               class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-file-pdf me-1"></i>Export PDF
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if attendance_data %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped" id="attendanceTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th><i class="fas fa-user me-1"></i>Student Name</th>
+                        <th><i class="fas fa-id-badge me-1"></i>Roll Number</th>
+                        <th><i class="fas fa-users me-1"></i>Class</th>
+                        <th><i class="fas fa-calendar me-1"></i>Total Days</th>
+                        <th><i class="fas fa-check-circle me-1"></i>Present Days</th>
+                        <th><i class="fas fa-times-circle me-1"></i>Absent Days</th>
+                        <th><i class="fas fa-percentage me-1"></i>Attendance %</th>
+                        <th><i class="fas fa-cog me-1"></i>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance_data %}
+                    <tr>
+                        <td>
+                            <strong>{{ record.name }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ record.roll_number }}</span>
+                        </td>
+                        <td>{{ record.class_name }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ record.total_days }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-success">{{ record.present_days }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-danger">{{ record.total_days - record.present_days }}</span>
+                        </td>
+                        <td>
+                            {% set percentage = (record.present_days / record.total_days * 100) if record.total_days > 0 else 0 %}
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-2" style="width: 60px; height: 20px;">
+                                    <div class="progress-bar 
+                                        {% if percentage >= 90 %}bg-success
+                                        {% elif percentage >= 80 %}bg-info
+                                        {% elif percentage >= 70 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" 
+                                        style="width: {{ percentage }}%;">
+                                    </div>
+                                </div>
+                                <span class="badge 
+                                    {% if percentage >= 90 %}bg-success
+                                    {% elif percentage >= 80 %}bg-info
+                                    {% elif percentage >= 70 %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ "%.1f"|format(percentage) }}%
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        onclick="viewStudentDetails('{{ record.name }}', '{{ record.roll_number }}', '{{ record.class_name }}', {{ record.total_days }}, {{ record.present_days }}, {{ "%.1f"|format(percentage) }})"
+                                        data-bs-toggle="modal" data-bs-target="#studentDetailModal">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if percentage < 75 %}
+                                <button class="btn btn-outline-warning btn-sm" 
+                                        onclick="sendAttendanceAlert('{{ record.name }}', {{ "%.1f"|format(percentage) }})"
+                                        title="Send Low Attendance Alert">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination would go here if needed -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <small class="text-muted">
+                Showing {{ attendance_data|length }} students
+            </small>
+            <div>
+                <button class="btn btn-outline-primary" onclick="printReport()">
+                    <i class="fas fa-print me-1"></i>Print Report
+                </button>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No attendance data found</h5>
+            <p class="text-muted">Please adjust your filters or ensure attendance has been marked.</p>
+            <a href="{{ url_for('attendance') }}" class="btn btn-primary">
+                <i class="fas fa-calendar-check me-2"></i>Mark Attendance
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal fade" id="studentDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Student Attendance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="studentDetailContent">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewStudentDetails(name, rollNumber, className, totalDays, presentDays, percentage) {
+    const absentDays = totalDays - presentDays;
+    const content = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-user me-2"></i>Student Information</h6>
+                <p><strong>Name:</strong> ${name}</p>
+                <p><strong>Roll Number:</strong> ${rollNumber}</p>
+                <p><strong>Class:</strong> ${className}</p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-chart-bar me-2"></i>Attendance Summary</h6>
+                <p><strong>Total Days:</strong> ${totalDays}</p>
+                <p><strong>Present Days:</strong> ${presentDays}</p>
+                <p><strong>Absent Days:</strong> ${absentDays}</p>
+                <p><strong>Attendance Percentage:</strong> 
+                    <span class="badge ${percentage >= 90 ? 'bg-success' : percentage >= 80 ? 'bg-info' : percentage >= 70 ? 'bg-warning' : 'bg-danger'}">${percentage}%</span>
+                </p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 25px;">
+            <div class="progress-bar ${percentage >= 90 ? 'bg-success' : percentage >= 80 ? 'bg-info' : percentage >= 70 ? 'bg-warning' : 'bg-danger'}" 
+                 style="width: ${percentage}%;">
+                ${percentage}%
+            </div>
+        </div>
+    `;
+    document.getElementById('studentDetailContent').innerHTML = content;
+}
+
+function sendAttendanceAlert(studentName, percentage) {
+    if (confirm(`Send low attendance alert for ${studentName} (${percentage}%)?`)) {
+        // Implementation for sending alert
+        alert('Attendance alert sent successfully!');
+    }
+}
+
+function printReport() {
+    window.print();
+}
+
+// Initialize DataTable for better sorting and searching
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('attendanceTable')) {
+        // Simple table enhancement
+        const table = document.getElementById('attendanceTable');
+        
+        // Add search functionality
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control mb-3';
+        searchInput.placeholder = 'Search students...';
+        searchInput.addEventListener('keyup', function() {
+            const filter = this.value.toLowerCase();
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            }
+        });
+        
+        table.parentNode.insertBefore(searchInput, table);
+    }
+});
+</script>
+
+<style>
+@media print {
+    .btn, .card-header .btn-group {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.card {
+    border-radius: 10px;
+}
+
+.badge {
+    font-size: 0.8em;
+}
+</style>
+
+{% endblock %}

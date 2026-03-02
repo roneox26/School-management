@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Class Schedule - {{ class_data.name }} {{ class_data.section }}</title>
+    <style>
+        @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .school-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .class-info {
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .schedule-table th,
+        .schedule-table td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .schedule-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .time-slot {
+            background-color: #f9f9f9;
+            font-weight: bold;
+            width: 120px;
+        }
+        
+        .subject {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .teacher {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <button class="btn btn-primary print-btn no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Schedule
+    </button>
+    
+    <div class="header">
+        <div class="school-name">School Management System</div>
+        <div class="class-info">Class Schedule - {{ class_data.name }} {{ class_data.section }}</div>
+        <div style="font-size: 14px; margin-top: 10px;">Academic Year: {{ datetime.now().year }}</div>
+    </div>
+    
+    <table class="schedule-table">
+        <thead>
+            <tr>
+                <th class="time-slot">Time</th>
+                <th>Monday</th>
+                <th>Tuesday</th>
+                <th>Wednesday</th>
+                <th>Thursday</th>
+                <th>Friday</th>
+                <th>Saturday</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for time_slot in time_slots %}
+            <tr>
+                <td class="time-slot">{{ time_slot }}</td>
+                {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                <td>
+                    {% set schedule_found = false %}
+                    {% for schedule in schedules %}
+                        {% if schedule.day_of_week == day and schedule.time_slot == time_slot %}
+                            {% set schedule_found = true %}
+                            <div class="subject">{{ schedule.subject }}</div>
+                            {% if schedule.teacher_name %}
+                                <div class="teacher">{{ schedule.teacher_name }}</div>
+                            {% endif %}
+                            {% if schedule.room_number %}
+                                <div class="teacher">Room: {{ schedule.room_number }}</div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if not schedule_found %}
+                        <div style="color: #bdc3c7;">---</div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>Generated on: {{ datetime.now().strftime('%B %d, %Y at %I:%M %p') }}</p>
+        <p>© School Management System</p>
+    </div>
+    
+    <script>
+        // Auto print when page loads (optional)
+        // window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>
