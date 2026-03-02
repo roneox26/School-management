@@ -433,22 +433,41 @@ def login():
         # Clear cache before checking admin
         clear_cache()
         
-        admin = Admin.find_by_username(form.username.data)
-        print(f"[DEBUG] Login attempt - Username: {form.username.data}, Found: {admin is not None}")
+        username = form.username.data
+        password = form.password.data
+        
+        print(f"[LOGIN] Attempt - Username: {username}")
+        
+        # Debug: Check all admins
+        all_admins = get_from_db('admin')
+        print(f"[LOGIN] Admins in DB: {len(all_admins) if isinstance(all_admins, list) else 0}")
+        
+        admin = Admin.find_by_username(username)
+        print(f"[LOGIN] Admin found: {admin is not None}")
         
         if admin:
-            is_valid = check_password_hash(admin.password_hash, form.password.data)
-            print(f"[DEBUG] Password check result: {is_valid}")
+            print(f"[LOGIN] Admin username: {admin.username}")
+            print(f"[LOGIN] Admin has password_hash: {hasattr(admin, 'password_hash')}")
             
-            if is_valid:
-                login_user(admin)
-                print(f"[DEBUG] User logged in successfully")
-                return redirect(url_for('dashboard'))
+            if hasattr(admin, 'password_hash') and admin.password_hash:
+                is_valid = check_password_hash(admin.password_hash, password)
+                print(f"[LOGIN] Password valid: {is_valid}")
+                
+                if is_valid:
+                    login_user(admin)
+                    print(f"[LOGIN] User logged in successfully")
+                    return redirect(url_for('dashboard'))
+                else:
+                    print(f"[LOGIN] Password mismatch")
+            else:
+                print(f"[LOGIN] No password hash found")
+        else:
+            print(f"[LOGIN] No admin found with username: {username}")
         
-        print(f"[DEBUG] Login failed for user: {form.username.data}")
+        print(f"[LOGIN] Failed for user: {username}")
         flash('Invalid username or password', 'error')
     else:
-        print(f"[DEBUG] Form validation failed: {form.errors}")
+        print(f"[LOGIN] Form validation failed: {form.errors}")
 
     return render_template('login_modern.html', form=form)
 
