@@ -60,6 +60,7 @@ body.guardian-portal {
   background: rgba(255,255,255,.2);
   display: flex; align-items: center; justify-content: center; font-size: 1rem;
 }
+.gp-brand-icon img { width: 28px; height: 28px; object-fit: contain; display: block; }
 .gp-brand-name { font-size: .95rem; font-weight: 800; color: #fff; }
 .gp-brand-sub  { font-size: .68rem; color: rgba(255,255,255,.75); }
 .gp-topbar-actions { display: flex; gap: .5rem; }
@@ -637,6 +638,7 @@ body.guardian-portal {
   color: #fff; font-size: 1.1rem;
   background: linear-gradient(135deg, var(--gp-primary), var(--gp-accent));
 }
+.gp-sidebar-brand-icon img { width: 34px; height: 34px; object-fit: contain; display: block; }
 .gp-sidebar-nav { flex: 1; overflow-y: auto; padding: 1rem 0; }
 .gp-nav-section { padding: .4rem 1.25rem .25rem; color: #64748b; font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .gp-sidebar-link {
