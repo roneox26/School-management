@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}ব্যবহারকারী ব্যবস্থাপনা{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1 fw-bold">👥 ব্যবহারকারী ব্যবস্থাপনা</h1>
+      <p class="text-muted mb-0">Teacher ও Guardian লগইন অ্যাকাউন্ট তৈরি ও পরিচালনা</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Create Teacher User -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-bottom-0 pt-4 px-4">
+          <h5 class="fw-bold mb-1"><i class="fas fa-chalkboard-teacher text-success me-2"></i>শিক্ষক লগইন তৈরি</h5>
+          <p class="text-muted small mb-0">বিদ্যমান Teacher record-এর জন্য login account তৈরি করুন</p>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <form method="POST" action="{{ url_for('admin_create_teacher_user') }}">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">শিক্ষক নির্বাচন</label>
+              <select name="teacher_id" class="form-select" required>
+                <option value="">শিক্ষক নির্বাচন করুন</option>
+                {% for t in teachers %}
+                {% if not t.has_account %}
+                <option value="{{ t.id }}">{{ t.name }} ({{ t.employee_id }})</option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">ব্যবহারকারী নাম</label>
+              <input type="text" name="username" class="form-control" required placeholder="teacher.john">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">পাসওয়ার্ড</label>
+              <input type="password" name="password" class="form-control" required minlength="6" placeholder="কমপক্ষে ৬ অক্ষর">
+            </div>
+            <button type="submit" class="btn btn-success w-100">
+              <i class="fas fa-plus-circle me-2"></i>শিক্ষক অ্যাকাউন্ট তৈরি
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Guardian User -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-bottom-0 pt-4 px-4">
+          <h5 class="fw-bold mb-1"><i class="fas fa-user-shield text-primary me-2"></i>অভিভাবক লগইন তৈরি</h5>
+          <p class="text-muted small mb-0">Student-এর Guardian-এর জন্য login account তৈরি করুন</p>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <form method="POST" action="{{ url_for('admin_create_guardian_user') }}">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">শিক্ষার্থী নির্বাচন</label>
+              <select name="student_id" class="form-select" required>
+                <option value="">শিক্ষার্থী নির্বাচন করুন</option>
+                {% for s in students %}
+                <option value="{{ s.id }}">{{ s.name }} — {{ s.class_name }} ({{ s.guardian_name }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">ব্যবহারকারী নাম</label>
+              <input type="text" name="username" class="form-control" required placeholder="parent.john">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">পাসওয়ার্ড</label>
+              <input type="password" name="password" class="form-control" required minlength="6" placeholder="কমপক্ষে ৬ অক্ষর">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-plus-circle me-2"></i>অভিভাবক অ্যাকাউন্ট তৈরি
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teacher Users List -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom-0 pt-4 px-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0"><i class="fas fa-chalkboard-teacher text-success me-2"></i>শিক্ষক অ্যাকাউন্ট</h5>
+            <span class="badge bg-success rounded-pill">{{ teacher_users|length }} জন</span>
+          </div>
+        </div>
+        <div class="card-body px-4 pb-4">
+          {% if teacher_users %}
+          <div class="list-group list-group-flush">
+            {% for tu in teacher_users %}
+            <div class="list-group-item px-0 border-0 py-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">{{ tu.username }}</div>
+                  <div class="text-muted small">
+                    <i class="fas fa-chalkboard-teacher me-1"></i>{{ tu.teacher_name or 'N/A' }}
+                    <span class="ms-2 text-success small">● Active</span>
+                  </div>
+                </div>
+                <form method="POST" action="{{ url_for('delete_teacher_user', user_id=tu.id) }}"
+                  onsubmit="return confirm('এই অ্যাকাউন্ট মুছে ফেলবেন?')">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-user-slash fa-2x mb-2 d-block opacity-25"></i>
+            কোনো শিক্ষক অ্যাকাউন্ট নেই
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Guardian Users List -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom-0 pt-4 px-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0"><i class="fas fa-user-shield text-primary me-2"></i>অভিভাবক অ্যাকাউন্ট</h5>
+            <span class="badge bg-primary rounded-pill">{{ guardian_users|length }} জন</span>
+          </div>
+        </div>
+        <div class="card-body px-4 pb-4">
+          {% if guardian_users %}
+          <div class="list-group list-group-flush">
+            {% for gu in guardian_users %}
+            <div class="list-group-item px-0 border-0 py-3">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1 me-2">
+                  <div class="fw-semibold">{{ gu.username }}</div>
+                  <div class="text-muted small mt-1">
+                    <i class="fas fa-user-graduate me-1"></i>
+                    {% if gu.student_names %}
+                      {% for name in gu.student_names %}
+                        <span class="badge bg-light text-dark border me-1">{{ name }}</span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-danger">কোনো শিক্ষার্থী নেই</span>
+                    {% endif %}
+                  </div>
+                  <div class="mt-1">
+                    <span class="text-primary small">● Active</span>
+                    {% if gu.updated_at %}
+                    <span class="text-muted small ms-2">· সর্বশেষ আপডেট: {{ gu.updated_at[:10] }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <!-- Edit Button -->
+                  <button type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    title="সম্পাদনা করুন"
+                    onclick="openEditGuardianModal(
+                      '{{ gu.id }}',
+                      '{{ gu.username }}',
+                      {{ gu.student_ids | tojson }}
+                    )">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <!-- Delete Button -->
+                  <form method="POST" action="{{ url_for('delete_guardian_user', user_id=gu.id) }}"
+                    onsubmit="return confirm('এই অ্যাকাউন্ট মুছে ফেলবেন?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="মুছে ফেলুন">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-user-slash fa-2x mb-2 d-block opacity-25"></i>
+            কোনো অভিভাবক অ্যাকাউন্ট নেই
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ====== Edit Guardian Modal ====== -->
+<div class="modal fade" id="editGuardianModal" tabindex="-1" aria-labelledby="editGuardianModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="editGuardianModalLabel">
+          <i class="fas fa-user-edit text-primary me-2"></i>
+          অভিভাবক অ্যাকাউন্ট সম্পাদনা
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" id="editGuardianForm" action="">
+        <div class="modal-body px-4">
+
+          <!-- Username (read-only) -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-muted small">ব্যবহারকারী নাম</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+              <input type="text" id="editGuardianUsername" class="form-control bg-light" readonly>
+            </div>
+            <div class="form-text">Username পরিবর্তন করা যাবে না।</div>
+          </div>
+
+          <!-- Student Multi-select -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              সন্তানদের তালিকা
+              <span class="badge bg-primary ms-1" id="selectedStudentCount">0</span>
+              জন নির্বাচিত
+            </label>
+            <div class="border rounded p-3" style="max-height: 220px; overflow-y: auto;" id="studentCheckboxList">
+              {% for s in students %}
+              <div class="form-check mb-2">
+                <input
+                  class="form-check-input guardian-student-cb"
+                  type="checkbox"
+                  name="student_ids"
+                  value="{{ s.id }}"
+                  id="gs_{{ s.id }}"
+                  onchange="updateSelectedCount()">
+                <label class="form-check-label" for="gs_{{ s.id }}">
+                  <span class="fw-semibold">{{ s.name }}</span>
+                  <span class="text-muted small ms-1">— {{ s.class_name }}</span>
+                  <span class="text-muted small">({{ s.guardian_name }})</span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="form-text text-danger d-none" id="noStudentWarning">
+              ⚠️ অন্তত একজন শিক্ষার্থী নির্বাচন করতে হবে।
+            </div>
+          </div>
+
+          <!-- Optional Password Reset -->
+          <div class="mb-1">
+            <label class="form-label fw-semibold">নতুন পাসওয়ার্ড <span class="text-muted fw-normal small">(পরিবর্তন না করলে ফাঁকা রাখুন)</span></label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="fas fa-lock"></i></span>
+              <input type="password" name="new_password" id="editGuardianPassword"
+                class="form-control" minlength="6" placeholder="নতুন পাসওয়ার্ড (ঐচ্ছিক)">
+              <button class="btn btn-outline-secondary" type="button" id="toggleEditPassword"
+                onclick="togglePasswordVisibility()">
+                <i class="fas fa-eye" id="eyeIcon"></i>
+              </button>
+            </div>
+            <div class="form-text">পরিবর্তন করতে চাইলে কমপক্ষে ৬ অক্ষর দিন।</div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>বাতিল
+          </button>
+          <button type="submit" class="btn btn-primary px-4" id="editGuardianSubmitBtn">
+            <i class="fas fa-save me-2"></i>সংরক্ষণ করুন
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+function openEditGuardianModal(userId, username, currentStudentIds) {
+  // Set form action
+  document.getElementById('editGuardianForm').action = '/admin/update_guardian_user/' + userId;
+
+  // Set username
+  document.getElementById('editGuardianUsername').value = username;
+
+  // Clear password field
+  document.getElementById('editGuardianPassword').value = '';
+
+  // Reset all checkboxes
+  document.querySelectorAll('.guardian-student-cb').forEach(cb => {
+    cb.checked = currentStudentIds.includes(cb.value);
+  });
+
+  updateSelectedCount();
+
+  // Show modal
+  var modal = new bootstrap.Modal(document.getElementById('editGuardianModal'));
+  modal.show();
+}
+
+function updateSelectedCount() {
+  const checked = document.querySelectorAll('.guardian-student-cb:checked').length;
+  document.getElementById('selectedStudentCount').textContent = checked;
+
+  const warning = document.getElementById('noStudentWarning');
+  const submitBtn = document.getElementById('editGuardianSubmitBtn');
+  if (checked === 0) {
+    warning.classList.remove('d-none');
+    submitBtn.disabled = true;
+  } else {
+    warning.classList.add('d-none');
+    submitBtn.disabled = false;
+  }
+}
+
+function togglePasswordVisibility() {
+  const input = document.getElementById('editGuardianPassword');
+  const icon = document.getElementById('eyeIcon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+
+// Prevent submit if no student selected
+document.getElementById('editGuardianForm').addEventListener('submit', function(e) {
+  const checked = document.querySelectorAll('.guardian-student-cb:checked').length;
+  if (checked === 0) {
+    e.preventDefault();
+    document.getElementById('noStudentWarning').classList.remove('d-none');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,343 @@
+/**
+ * Print-Friendly Stylesheet
+ * Optimizes pages for printing
+ */
+
+@media print {
+
+    /* Hide non-essential elements */
+    .sidebar,
+    .top-navbar,
+    .btn,
+    .floating-particles,
+    .notification-badge,
+    .dropdown,
+    .alert,
+    .mobile-menu-toggle,
+    #loadingOverlay,
+    #themeToggleContainer,
+    .search-box,
+    #searchDropdown,
+    .sidebar-overlay {
+        display: none !important;
+    }
+
+    /* Reset layout for print */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    .content-wrapper {
+        padding: 0 !important;
+    }
+
+    .container-fluid {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    /* Reset colors for print */
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    body::before {
+        display: none !important;
+    }
+
+    /* Card styles for print */
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        background: white !important;
+        page-break-inside: avoid;
+        margin-bottom: 1rem !important;
+    }
+
+    .card-header {
+        background: #f8f9fa !important;
+        color: black !important;
+        border-bottom: 2px solid #ddd !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Table styles for print */
+    .table {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+
+    .table thead {
+        background: #f8f9fa !important;
+        color: black !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .table thead th {
+        border: 1px solid #ddd !important;
+    }
+
+    .table tbody td {
+        border: 1px solid #ddd !important;
+        color: black !important;
+    }
+
+    .table tbody tr:hover {
+        background: transparent !important;
+        transform: none !important;
+    }
+
+    /* Typography for print */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        color: black !important;
+        page-break-after: avoid;
+    }
+
+    p {
+        orphans: 3;
+        widows: 3;
+    }
+
+    /* Links */
+    a {
+        text-decoration: underline !important;
+        color: black !important;
+    }
+
+    a[href]:after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+        font-weight: normal;
+    }
+
+    a[href^="#"]:after,
+    a[href^="javascript:"]:after {
+        content: "";
+    }
+
+    /* Page breaks */
+    .page-break {
+        page-break-before: always;
+    }
+
+    .no-page-break {
+        page-break-inside: avoid;
+    }
+
+    /* Headers and footers */
+    @page {
+        margin: 2cm;
+        size: A4;
+    }
+
+    @page :first {
+        margin-top: 3cm;
+    }
+
+    /* Print header */
+    .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #333;
+        padding-bottom: 1rem;
+    }
+
+    .print-header h1 {
+        margin: 0;
+        font-size: 24pt;
+    }
+
+    .print-header p {
+        margin: 0.5rem 0 0 0;
+        font-size: 12pt;
+    }
+
+    /* Print footer */
+    .print-footer {
+        display: block !important;
+        text-align: center;
+        margin-top: 2rem;
+        border-top: 1px solid #ddd;
+        padding-top: 1rem;
+        font-size: 10pt;
+    }
+
+    /* Stats cards */
+    .stats-card {
+        background: white !important;
+        border: 1px solid #ddd !important;
+        color: black !important;
+    }
+
+    .stats-card::before {
+        display: none !important;
+    }
+
+    /* Forms */
+    .form-control,
+    .form-select {
+        border: 1px solid #ddd !important;
+        background: white !important;
+        color: black !important;
+    }
+
+    /* Badges */
+    .badge {
+        border: 1px solid #ddd !important;
+        background: white !important;
+        color: black !important;
+    }
+
+    /* Progress bars */
+    .progress {
+        border: 1px solid #ddd !important;
+        background: #f8f9fa !important;
+    }
+
+    .progress-bar {
+        background: #333 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Charts - hide canvas elements as they don't print well */
+    canvas {
+        display: none !important;
+    }
+
+    /* Show alternative text for charts */
+    .chart-print-alt {
+        display: block !important;
+    }
+
+    /* Remove animations */
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    /* Optimize images */
+    img {
+        max-width: 100% !important;
+        page-break-inside: avoid;
+    }
+
+    /* Remove shadows and effects */
+    * {
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    /* Ensure text is readable */
+    .text-muted {
+        color: #666 !important;
+    }
+
+    .text-white {
+        color: black !important;
+    }
+
+    /* Status indicators */
+    .status-active,
+    .status-inactive,
+    .status-pending {
+        color: black !important;
+    }
+
+    .status-active::before {
+        content: "✓ ";
+    }
+
+    .status-inactive::before {
+        content: "✗ ";
+    }
+
+    .status-pending::before {
+        content: "⏳ ";
+    }
+
+    /* Breadcrumbs */
+    .breadcrumb {
+        border: none !important;
+        background: transparent !important;
+    }
+
+    /* Modals */
+    .modal {
+        position: static !important;
+        display: block !important;
+    }
+
+    .modal-dialog {
+        margin: 0 !important;
+    }
+
+    .modal-content {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+
+    /* Dropdowns */
+    .dropdown-menu {
+        display: none !important;
+    }
+
+    /* Tooltips and popovers */
+    .tooltip,
+    .popover {
+        display: none !important;
+    }
+
+    /* Print utilities */
+    .print-only {
+        display: block !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    /* Page numbering */
+    .page-number::after {
+        content: counter(page);
+    }
+
+    /* Landscape orientation for wide tables */
+    @page landscape {
+        size: A4 landscape;
+    }
+
+    .print-landscape {
+        page: landscape;
+    }
+}
+
+/* Print button styling (visible on screen only) */
+@media screen {
+    .print-btn {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .print-header,
+    .print-footer {
+        display: none;
+    }
+
+    .chart-print-alt {
+        display: none;
+    }
+}

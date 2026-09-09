@@ -1,0 +1,83 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}Exam Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-graduation-cap me-2"></i>Exams</h4>
+    <a href="{{ url_for('add_exam') }}" class="btn btn-custom">
+        <i class="fas fa-plus me-2"></i>Add New Exam
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if exams %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Exam Name</th>
+                            <th>Class</th>
+                            <th>Subject</th>
+                            <th>Date</th>
+                            <th>Total Marks</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exam in exams %}
+                        <tr>
+                            <td><strong>{{ exam.name }}</strong></td>
+                            <td>{{ exam.class_name or 'N/A' }}</td>
+                            <td>{{ exam.subject }}</td>
+                            <td>{{ exam.exam_date.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ exam.total_marks }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('exam_results', exam_id=exam.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-chart-bar"></i> Results
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="editExam({{ exam.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <a href="{{ url_for('send_exam_reminder', exam_id=exam.id) }}" class="btn btn-sm btn-outline-success" onclick="return confirm('Send exam reminder to all students in this class?')">
+                                        <i class="fas fa-bell"></i> Remind
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
+                <h5>No exams scheduled</h5>
+                <p class="text-muted">Add exams to start managing exam schedules.</p>
+                <a href="{{ url_for('add_exam') }}" class="btn btn-custom">
+                    <i class="fas fa-plus me-2"></i>Add First Exam
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function viewResults(examId) {
+    alert('Results view coming soon!');
+}
+
+function editExam(examId) {
+    alert('Edit exam feature coming soon!');
+}
+
+function sendExamReminder(examId) {
+    if(confirm('Send exam reminder SMS to all students?')) {
+        alert('Sending exam reminders...');
+    }
+}
+</script>
+{% endblock %}

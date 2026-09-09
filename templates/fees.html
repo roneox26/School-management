@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block page_title %}Fees & Finance{% endblock %}
+{% block breadcrumb %} / <span>Fees</span>{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <div class="page-header-left">
+        <h1 class="page-title">Fees & Finance</h1>
+        <p class="page-subtitle">Track student fee payments, dues, and reminders</p>
+    </div>
+    <div class="page-header-actions">
+        <button class="btn btn-ghost" onclick="sendAllFeeReminders()">
+            <i class="fas fa-bell"></i> Send Reminders
+        </button>
+        <button class="btn btn-ghost" onclick="exportFeeReport()">
+            <i class="fas fa-download"></i> Export
+        </button>
+        <a href="{{ url_for('add_fee') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Fee
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem;" class="animate-in">
+    <div class="card" style="padding:1.25rem;border-left:3px solid var(--color-success);">
+        <div style="font-size:.75rem;color:var(--neutral-500);font-weight:600;margin-bottom:.25rem;">COLLECTED</div>
+        <div style="font-size:1.5rem;font-weight:800;color:var(--color-success);">
+            ৳{{ "{:,.0f}".format(fees|selectattr('is_paid')|sum(attribute='amount') if fees else 0) }}
+        </div>
+    </div>
+    <div class="card" style="padding:1.25rem;border-left:3px solid var(--color-warning);">
+        <div style="font-size:.75rem;color:var(--neutral-500);font-weight:600;margin-bottom:.25rem;">PENDING</div>
+        <div style="font-size:1.5rem;font-weight:800;color:var(--color-warning);">
+            ৳{{ "{:,.0f}".format(fees|rejectattr('is_paid')|sum(attribute='amount') if fees else 0) }}
+        </div>
+    </div>
+    <div class="card" style="padding:1.25rem;border-left:3px solid var(--color-success);">
+        <div style="font-size:.75rem;color:var(--neutral-500);font-weight:600;margin-bottom:.25rem;">PAID RECORDS</div>
+        <div style="font-size:1.5rem;font-weight:800;color:var(--neutral-900);">{{
+            fees|selectattr('is_paid')|list|length if fees else 0 }}</div>
+    </div>
+    <div class="card" style="padding:1.25rem;border-left:3px solid var(--color-danger);">
+        <div style="font-size:.75rem;color:var(--neutral-500);font-weight:600;margin-bottom:.25rem;">UNPAID</div>
+        <div style="font-size:1.5rem;font-weight:800;color:var(--color-danger);">{{
+            fees|rejectattr('is_paid')|list|length if fees else 0 }}</div>
+    </div>
+</div>
+
+<!-- Filter -->
+<form method="GET" class="filter-bar animate-in"
+    style="background:white;border:1px solid var(--neutral-200);border-radius:var(--radius-xl);padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:.875rem;flex-wrap:wrap;box-shadow:var(--shadow-sm);">
+    <select name="status" class="form-control" style="width:auto;min-width:160px;">
+        <option value="all" {% if request.args.get('status', 'all' )=='all' %}selected{% endif %}>All Status</option>
+        <option value="paid" {% if request.args.get('status')=='paid' %}selected{% endif %}>Paid Only</option>
+        <option value="unpaid" {% if request.args.get('status')=='unpaid' %}selected{% endif %}>Unpaid Only</option>
+    </select>
+    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+    <a href="{{ url_for('fees') }}" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</a>
+</form>
+
+<!-- Fee Table -->
+<div class="card animate-in">
+    {% if fees %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Fee Type</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fee in fees %}
+                <tr>
+                    <td>
+                        <div style="font-weight:600;font-size:.875rem;color:var(--neutral-900);">{{
+                            fee.get('student_name', 'N/A') }}</div>
+                        <div style="font-size:.75rem;color:var(--neutral-500);">
+                            Roll: {{ fee.get('student_roll', '—') }} &bull; {{ fee.get('class_name', '—') }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-info">{{ fee.get('fee_type', 'N/A') }}</span>
+                    </td>
+                    <td>
+                        <span style="font-size:1rem;font-weight:800;color:var(--neutral-900);">৳{{
+                            "{:,.0f}".format(fee.get('amount', 0)) }}</span>
+                    </td>
+                    <td style="font-size:.875rem;color:var(--neutral-600);">{{ fee.get('due_date', '—') }}</td>
+                    <td>
+                        {% if fee.get('is_paid', False) %}
+                        <div>
+                            <span class="badge badge-success"><i class="fas fa-check" style="font-size:.5rem;"></i>
+                                Paid</span>
+                            <div style="font-size:.7rem;color:var(--neutral-400);margin-top:2px;">{{
+                                fee.get('paid_date', '') }}</div>
+                        </div>
+                        {% elif fee.get('due_date', '') < current_date %} <span class="badge badge-danger"><i
+                                class="fas fa-exclamation" style="font-size:.5rem;"></i> Overdue</span>
+                            {% else %}
+                            <span class="badge badge-warning"><i class="fas fa-clock" style="font-size:.5rem;"></i>
+                                Pending</span>
+                            {% endif %}
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:.375rem;flex-wrap:wrap;">
+                            {% if not fee.get('is_paid', False) %}
+                            <a href="{{ url_for('mark_fee_paid', fee_id=fee.get('id')) }}" class="btn btn-sm btn-ghost"
+                                style="color:var(--color-success);" onclick="return confirm('Mark this fee as paid?')"
+                                title="Mark Paid">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            <a href="{{ url_for('send_fee_reminder', fee_id=fee.get('id')) }}"
+                                class="btn btn-sm btn-ghost" style="color:var(--brand-primary);"
+                                onclick="return confirm('Send reminder?')" title="Send SMS Reminder">
+                                <i class="fas fa-bell"></i>
+                            </a>
+                            {% endif %}
+                            <button class="btn btn-sm btn-ghost" style="color:var(--color-danger);"
+                                onclick="deleteFee('{{ fee.get('id') }}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding:.875rem 1.5rem;border-top:1px solid var(--neutral-100);background:var(--neutral-50);">
+        <span style="font-size:.8125rem;color:var(--neutral-500);">Showing <strong>{{ fees|length }}</strong> fee
+            record(s)</span>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon"><i class="fas fa-money-bill-wave"></i></div>
+        <h3>No Fee Records</h3>
+        <p>Add fee entries for students to start tracking payments.</p>
+        <a href="{{ url_for('add_fee') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add First Fee
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function sendAllFeeReminders() {
+        if (!confirm('Send SMS reminders to all students with due fees?')) return;
+        fetch('/send_bulk_fee_reminders', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                showToast(d.success ? 'Success' : 'Error', d.message || 'Done', d.success ? 'success' : 'error');
+            }).catch(() => showToast('Error', 'Failed to send reminders', 'error'));
+    }
+
+    function exportFeeReport() {
+        window.location.href = '{{ url_for("generate_report", report_type="fees") }}';
+    }
+
+    function deleteFee(feeId) {
+        if (!confirm('Delete this fee record?')) return;
+        fetch(`/delete_fee/${feeId}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                showToast(d.success ? 'Deleted' : 'Error', d.message || '', d.success ? 'success' : 'error');
+                if (d.success) setTimeout(() => location.reload(), 1500);
+            }).catch(() => showToast('Error', 'Could not delete', 'error'));
+    }
+</script>
+{% endblock %}

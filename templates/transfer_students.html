@@ -1,0 +1,136 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}Transfer Students{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-exchange-alt me-2"></i>Transfer Students</h4>
+    <a href="{{ url_for('classes') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Classes
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Transfer Students from {{ source_class.name }} - {{ source_class.section }}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if not target_classes %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No other classes available for transfer. Please create another class first.
+                </div>
+                {% elif not students %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No students found in this class.
+                </div>
+                {% else %}
+                <form method="POST">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label required">Select Target Class</label>
+                            <select name="target_class_id" class="form-select" required>
+                                <option value="">Choose target class...</option>
+                                {% for class in target_classes %}
+                                <option value="{{ class.id }}">{{ class.name }} - {{ class.section }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Select Students to Transfer</label>
+                        <div class="border p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleAll()">
+                                <label class="form-check-label fw-bold" for="selectAll">
+                                    Select All Students
+                                </label>
+                            </div>
+                            <hr>
+                            {% for student in students %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input student-checkbox" type="checkbox" name="student_ids" value="{{ student.id }}" id="student{{ student.id }}">
+                                <label class="form-check-label" for="student{{ student.id }}">
+                                    {{ student.name }} ({{ student.roll_number }})
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('classes') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-exchange-alt me-2"></i>Transfer Selected Students
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle me-2"></i>Transfer Information</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Source Class:</strong><br>{{ source_class.name }} - {{ source_class.section }}</p>
+                <p><strong>Total Students:</strong> {{ students|length }}</p>
+                <hr>
+                <div class="alert alert-warning small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    After transferring all students, you can delete this class.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+}
+
+// Update select all checkbox when individual checkboxes change
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            const noneChecked = Array.from(checkboxes).every(cb => !cb.checked);
+            
+            if (allChecked) {
+                selectAll.checked = true;
+                selectAll.indeterminate = false;
+            } else if (noneChecked) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            } else {
+                selectAll.checked = false;
+                selectAll.indeterminate = true;
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

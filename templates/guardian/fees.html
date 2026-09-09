@@ -1,0 +1,144 @@
+{% extends "guardian/base_guardian.html" %}
+{% block title %}ফি বিবরণ{% endblock %}
+
+{% block extra_css %}
+<style>
+.fee-hero {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 1.5rem 1.25rem; color: #fff;
+}
+.fee-hero-title { font-size: .8rem; opacity: .8; margin-bottom: .25rem; }
+.fee-hero-amount { font-size: 2.2rem; font-weight: 800; }
+.fee-hero-sub { font-size: .8rem; opacity: .75; margin-top: .25rem; }
+
+.fee-breakdown { display: flex; gap: .625rem; padding: 1rem; }
+.fee-break-item { flex: 1; text-align: center; border-radius: 12px; padding: .875rem .5rem; }
+.fee-break-val { font-size: 1.2rem; font-weight: 800; }
+.fee-break-lbl { font-size: .7rem; margin-top: .2rem; }
+.fee-paid { background: #d1fae5; } .fee-paid .fee-break-val { color: #065f46; } .fee-paid .fee-break-lbl { color: #10b981; }
+.fee-due  { background: #fee2e2; } .fee-due  .fee-break-val { color: #991b1b; } .fee-due  .fee-break-lbl { color: #ef4444; }
+.fee-total { background: #ede9fe; } .fee-total .fee-break-val { color: #5b21b6; } .fee-total .fee-break-lbl { color: #8b5cf6; }
+
+.fee-progress { padding: 0 1rem .75rem; }
+.fee-prog-bar { height: 10px; border-radius: 999px; background: #f3f4f6; overflow: hidden; }
+.fee-prog-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#10b981,#059669); transition: width .8s; }
+.fee-prog-label { text-align: right; font-size: .72rem; color: #6b7280; margin-top: .3rem; }
+
+.fee-list { padding: 0 1rem 1rem; }
+.fee-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #fff; border-radius: 12px; padding: .875rem 1rem;
+  margin-bottom: .625rem; box-shadow: 0 1px 8px rgba(0,0,0,.06);
+  border-left: 4px solid #e5e7eb;
+}
+.fee-item.paid-item { border-left-color: #10b981; }
+.fee-item.due-item  { border-left-color: #ef4444; }
+.fee-item-name { font-weight: 700; font-size: .9rem; color: #1e1b4b; }
+.fee-item-meta { font-size: .72rem; color: #9ca3af; margin-top: .2rem; }
+.fee-item-amount { font-size: 1.1rem; font-weight: 800; }
+.fee-item.paid-item .fee-item-amount { color: #10b981; }
+.fee-item.due-item  .fee-item-amount { color: #ef4444; }
+.fee-status-tag { font-size: .68rem; border-radius: 999px; padding: .2rem .6rem; font-weight: 700; margin-top: .3rem; display: inline-block; }
+.tag-paid { background: #d1fae5; color: #065f46; }
+.tag-due  { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if all_students|length > 1 %}
+<div class="gp-child-switcher">
+  <div class="gp-child-switcher-inner">
+    <div class="gp-child-scroll">
+      {% for s in all_students %}
+      <form method="POST" action="{{ url_for('guardian_switch_child') }}" style="display:inline">
+        <input type="hidden" name="student_id" value="{{ s.id }}">
+        <button type="submit" class="gp-child-chip {% if active_student and s.id == active_student.id %}active{% endif %}">
+          <div class="gp-child-avatar">{{ s.name[0] if s.name else '?' }}</div>
+          <div>
+            <div class="gp-child-name">{{ s.name }}</div>
+            <div class="gp-child-class">{{ s.class_name }}</div>
+          </div>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if active_student %}
+<!-- Hero -->
+<div class="fee-hero">
+  <div class="fee-hero-title">মোট বকেয়া ফি</div>
+  <div class="fee-hero-amount">৳{{ due_fee|int }}</div>
+  <div class="fee-hero-sub">{{ active_student.name }} • {{ active_student.class_name }}</div>
+</div>
+
+<!-- Breakdown -->
+<div class="fee-breakdown">
+  <div class="fee-break-item fee-total">
+    <div class="fee-break-val">৳{{ total_fee|int }}</div>
+    <div class="fee-break-lbl">মোট ফি</div>
+  </div>
+  <div class="fee-break-item fee-paid">
+    <div class="fee-break-val">৳{{ paid_fee|int }}</div>
+    <div class="fee-break-lbl">পরিশোধিত</div>
+  </div>
+  <div class="fee-break-item fee-due">
+    <div class="fee-break-val">৳{{ due_fee|int }}</div>
+    <div class="fee-break-lbl">বকেয়া</div>
+  </div>
+</div>
+
+<!-- Progress -->
+{% if total_fee > 0 %}
+<div class="fee-progress">
+  {% set paid_pct = ((paid_fee / total_fee) * 100)|int %}
+  <div class="fee-prog-bar">
+    <div class="fee-prog-fill" style="width:{{ paid_pct }}%"></div>
+  </div>
+  <div class="fee-prog-label">{{ paid_pct }}% পরিশোধিত</div>
+</div>
+{% endif %}
+
+<!-- Fee Records -->
+<div class="fee-list">
+  <div class="gp-section-title" style="margin-bottom:.75rem;">ফি রেকর্ড</div>
+  {% if fees %}
+    {% for fee in fees %}
+    <div class="fee-item {{ 'paid-item' if fee.is_paid else 'due-item' }}">
+      <div>
+        <div class="fee-item-name">{{ fee.fee_type or 'ফি' }}</div>
+        <div class="fee-item-meta">
+          <i class="fas fa-calendar"></i>
+          {{ fee.created_at[:10] if fee.created_at else 'N/A' }}
+          {% if fee.due_date %} • বকেয়া তারিখ: {{ fee.due_date }}{% endif %}
+        </div>
+        {% if fee.is_paid %}
+        <span class="fee-status-tag tag-paid">✓ পরিশোধিত</span>
+        {% else %}
+        <span class="fee-status-tag tag-due">⚠ বকেয়া</span>
+        {% endif %}
+      </div>
+      <div style="text-align:right;">
+        <div class="fee-item-amount">৳{{ fee.amount|int }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div style="text-align:center;padding:2.5rem;color:#9ca3af;">
+    <i class="fas fa-receipt" style="font-size:2.5rem;display:block;margin-bottom:.75rem;opacity:.3;"></i>
+    <div style="font-weight:600;">কোনো ফি রেকর্ড নেই</div>
+  </div>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="gp-page">
+  <div style="text-align:center;padding:3rem;color:#9ca3af;">
+    <i class="fas fa-user-slash" style="font-size:3rem;display:block;margin-bottom:1rem;opacity:.3;"></i>
+    <div style="font-weight:600;">শিক্ষার্থী সংযুক্ত নেই</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

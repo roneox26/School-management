@@ -1,0 +1,332 @@
+/**
+ * Dark Mode Theme for School Management System
+ * Toggle this stylesheet to enable dark mode
+ */
+
+/* ==================== Dark Mode Variables ==================== */
+[data-theme="dark"] {
+    --primary-gradient: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    --primary-gradient-hover: linear-gradient(135deg, #6d28d9 0%, #9333ea 100%);
+    --success-gradient: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    --danger-gradient: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+    --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    --info-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    --accent-gradient: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+    --glass-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+
+    --primary-color: #8b5cf6;
+    --secondary-color: #a855f7;
+    --surface-color: #1e293b;
+    --background-color: #0f172a;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --border-color: #334155;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+    --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+/* ==================== Dark Mode Body ==================== */
+[data-theme="dark"] body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] body::before {
+    background:
+        radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 50%);
+}
+
+/* ==================== Dark Mode Cards ==================== */
+[data-theme="dark"] .card {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .card:hover {
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* ==================== Dark Mode Forms ==================== */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background: #1e293b;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background: #1e293b;
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: var(--text-secondary);
+}
+
+/* ==================== Dark Mode Tables ==================== */
+[data-theme="dark"] .table {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+    background: linear-gradient(90deg,
+            rgba(139, 92, 246, 0.1) 0%,
+            rgba(139, 92, 246, 0.15) 50%,
+            rgba(139, 92, 246, 0.1) 100%);
+}
+
+[data-theme="dark"] .table tbody td {
+    border-color: var(--border-color);
+}
+
+/* ==================== Dark Mode Modals ==================== */
+[data-theme="dark"] .modal-content {
+    background: #1e293b;
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+    border-color: var(--border-color);
+    background: #1e293b;
+}
+
+[data-theme="dark"] .btn-close {
+    filter: invert(1);
+}
+
+/* ==================== Dark Mode Dropdowns ==================== */
+[data-theme="dark"] .dropdown-menu {
+    background: #1e293b;
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .dropdown-item {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .dropdown-divider {
+    border-color: var(--border-color);
+}
+
+/* ==================== Dark Mode Top Navbar ==================== */
+[data-theme="dark"] .top-navbar {
+    background: rgba(30, 41, 59, 0.95);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .top-navbar::before {
+    background: linear-gradient(90deg,
+            rgba(139, 92, 246, 0.05) 0%,
+            rgba(168, 85, 247, 0.05) 50%,
+            rgba(139, 92, 246, 0.05) 100%);
+}
+
+/* ==================== Dark Mode Search Box ==================== */
+[data-theme="dark"] .search-box {
+    background: #1e293b;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .search-box:focus {
+    background: #1e293b;
+    border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .search-box::placeholder {
+    color: var(--text-secondary);
+}
+
+/* ==================== Dark Mode Alerts ==================== */
+[data-theme="dark"] .alert {
+    border: 1px solid var(--border-color);
+}
+
+/* ==================== Dark Mode Breadcrumb ==================== */
+[data-theme="dark"] .breadcrumb-item.active {
+    color: var(--text-secondary);
+}
+
+/* ==================== Dark Mode List Group ==================== */
+[data-theme="dark"] .list-group-item {
+    background: #1e293b;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .list-group-item:hover {
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+/* ==================== Dark Mode Progress ==================== */
+[data-theme="dark"] .progress {
+    background: var(--border-color);
+}
+
+/* ==================== Dark Mode Text Colors ==================== */
+[data-theme="dark"] .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-dark {
+    color: var(--text-primary) !important;
+}
+
+/* ==================== Dark Mode Borders ==================== */
+[data-theme="dark"] .border,
+[data-theme="dark"] .border-top,
+[data-theme="dark"] .border-bottom,
+[data-theme="dark"] .border-start,
+[data-theme="dark"] .border-end {
+    border-color: var(--border-color) !important;
+}
+
+/* ==================== Dark Mode Loading Overlay ==================== */
+[data-theme="dark"] #loadingOverlay {
+    background: rgba(15, 23, 42, 0.95);
+}
+
+/* ==================== Dark Mode Sidebar Adjustments ==================== */
+[data-theme="dark"] .sidebar {
+    background: rgba(30, 41, 59, 0.2);
+}
+
+[data-theme="dark"] .sidebar::before {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+}
+
+/* ==================== Dark Mode Floating Particles ==================== */
+[data-theme="dark"] .particle {
+    background: rgba(139, 92, 246, 0.15);
+}
+
+/* ==================== Dark Mode Badge ==================== */
+[data-theme="dark"] .badge {
+    border: 1px solid var(--border-color);
+}
+
+/* ==================== Dark Mode Input Group ==================== */
+[data-theme="dark"] .input-group-text {
+    background: #1e293b;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* ==================== Dark Mode Pagination ==================== */
+[data-theme="dark"] .page-link {
+    background: #1e293b;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .page-link:hover {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .page-item.active .page-link {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* ==================== Dark Mode Accordion ==================== */
+[data-theme="dark"] .accordion-item {
+    background: #1e293b;
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .accordion-button {
+    background: #1e293b;
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .accordion-button:not(.collapsed) {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--primary-color);
+}
+
+/* ==================== Dark Mode Nav Tabs ==================== */
+[data-theme="dark"] .nav-tabs {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link:hover {
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active {
+    background: #1e293b;
+    border-color: var(--border-color);
+    color: var(--primary-color);
+}
+
+/* ==================== Dark Mode Tooltips ==================== */
+[data-theme="dark"] .tooltip-inner {
+    background: #1e293b;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .tooltip .tooltip-arrow::before {
+    border-top-color: var(--border-color);
+}
+
+/* ==================== Dark Mode Popovers ==================== */
+[data-theme="dark"] .popover {
+    background: #1e293b;
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .popover-header {
+    background: rgba(139, 92, 246, 0.1);
+    border-bottom-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .popover-body {
+    color: var(--text-primary);
+}
+
+/* ==================== Dark Mode Toast ==================== */
+[data-theme="dark"] .toast {
+    background: #1e293b;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .toast-header {
+    background: rgba(139, 92, 246, 0.1);
+    border-bottom-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* ==================== Smooth Theme Transition ==================== */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Exclude animations and transforms from transition */
+*:not(.particle):not(.nav-link):not(.btn):not(.card) {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

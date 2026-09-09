@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block page_title %}Send SMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-paper-plane me-2"></i>Send SMS: {{ template.name }}</h4>
+    <a href="{{ url_for('sms_management') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to SMS Management
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-envelope me-2"></i>{{ template.name }}</h5>
+                <small class="text-muted">Type: {{ template.template_type.replace('_', ' ').title() }}</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('send_bulk_sms') }}">
+                    <input type="hidden" name="template_id" value="{{ template.id }}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Template Message</label>
+                        <div class="alert alert-info">
+                            {{ template.message }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Custom Message (Optional)</label>
+                        <textarea name="custom_message" class="form-control" rows="4" 
+                                  placeholder="Leave blank to use template message"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Send To:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipient_type" value="all" id="sendAll" checked>
+                            <label class="form-check-label" for="sendAll">
+                                All Active Students
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipient_type" value="class" id="sendClass">
+                            <label class="form-check-label" for="sendClass">
+                                Specific Class
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipient_type" value="individual" id="sendIndividual">
+                            <label class="form-check-label" for="sendIndividual">
+                                Selected Students
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="classSelection" style="display: none;">
+                        <label class="form-label">Select Class:</label>
+                        <select name="class_id" class="form-select">
+                            <option value="">Choose Class...</option>
+                            {% for class in classes %}
+                                <option value="{{ class.id }}">{{ class.name }} - {{ class.section }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="individualSelection" style="display: none;">
+                        <label class="form-label">Select Students:</label>
+                        <div class="row" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                            {% for student in students %}
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="student_ids" value="{{ student.id }}" id="student{{ student.id }}">
+                                    <label class="form-check-label" for="student{{ student.id }}">
+                                        {{ student.name }} ({{ student.roll_number }}) - {{ student.class_section.name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-info" onclick="previewMessage()">
+                            <i class="fas fa-eye me-2"></i>Preview Message
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i>Send SMS
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle me-2"></i>Available Placeholders</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">You can use these placeholders in your message:</p>
+                <ul class="list-unstyled small">
+                    <li><code>{student_name}</code> - Student's name</li>
+                    <li><code>{guardian_name}</code> - Guardian's name</li>
+                    <li><code>{class_name}</code> - Class name</li>
+                    <li><code>{roll_number}</code> - Roll number</li>
+                    {% if template.template_type == 'fee_due' %}
+                    <li><code>{due_amount}</code> - Fee amount</li>
+                    <li><code>{due_date}</code> - Due date</li>
+                    {% elif template.template_type == 'exam_reminder' %}
+                    <li><code>{exam_name}</code> - Exam name</li>
+                    <li><code>{exam_date}</code> - Exam date</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-chart-bar me-2"></i>SMS Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="bg-light p-2 rounded">
+                            <strong>{{ students|length }}</strong>
+                            <small class="d-block text-muted">Total Students</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-light p-2 rounded">
+                            <strong>{{ classes|length }}</strong>
+                            <small class="d-block text-muted">Total Classes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const radios = document.querySelectorAll('input[name="recipient_type"]');
+    const classSelection = document.getElementById('classSelection');
+    const individualSelection = document.getElementById('individualSelection');
+
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            classSelection.style.display = 'none';
+            individualSelection.style.display = 'none';
+
+            if (this.value === 'class') {
+                classSelection.style.display = 'block';
+            } else if (this.value === 'individual') {
+                individualSelection.style.display = 'block';
+            }
+        });
+    });
+});
+
+function previewMessage() {
+    const customMessage = document.querySelector('textarea[name="custom_message"]').value;
+    const message = customMessage || '{{ template.message }}';
+
+    const previewText = message.replace('{student_name}', 'রহিম আহমেদ')
+                              .replace('{guardian_name}', 'মো. করিম উদ্দিন')
+                              .replace('{class_name}', 'Class 10 - A')
+                              .replace('{roll_number}', '001')
+                              .replace('{due_amount}', '1500')
+                              .replace('{due_date}', '15-08-2024')
+                              .replace('{exam_name}', 'Half Yearly Exam')
+                              .replace('{exam_date}', '20-08-2024');
+
+    alert('Message Preview:\n\n' + previewText);
+}
+</script>
+{% endblock %}
+{% extends "base.html" %}
+
+{% block page_title %}Send SMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-paper-plane me-2"></i>Send SMS</h4>
+    <a href="{{ url_for('sms_management') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to SMS Management
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Using Template: {{ template.name }}</h5>
+        <small class="text-muted">{{ template.template_type.replace('_', ' ').title() }}</small>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('send_sms') }}">
+            <input type="hidden" name="template_id" value="{{ template.id }}">
+            
+            <div class="mb-3">
+                <label class="form-label">Recipients</label>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipient_type" id="all_students" value="all" checked>
+                            <label class="form-check-label" for="all_students">
+                                All Students' Guardians
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipient_type" id="by_class" value="class">
+                            <label class="form-check-label" for="by_class">
+                                By Class
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipient_type" id="individual" value="individual">
+                            <label class="form-check-label" for="individual">
+                                Select Individual Students
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Class Selection -->
+            <div class="mb-3" id="class_selection" style="display: none;">
+                <label class="form-label">Select Class</label>
+                <select class="form-select" name="class_id">
+                    <option value="">Choose a class</option>
+                    {% for class in classes %}
+                    <option value="{{ class.id }}">{{ class.name }} - {{ class.section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Individual Student Selection -->
+            <div class="mb-3" id="student_selection" style="display: none;">
+                <label class="form-label">Select Students</label>
+                <div class="row">
+                    {% for student in students %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="student_ids" value="{{ student.id }}" id="student_{{ student.id }}">
+                            <label class="form-check-label" for="student_{{ student.id }}">
+                                {{ student.name }} ({{ student.roll_number }})
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Message</label>
+                <textarea class="form-control" name="message" rows="5" required>{{ template.message }}</textarea>
+                <small class="text-muted">Available placeholders: {student_name}, {guardian_name}</small>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-paper-plane me-1"></i>Send SMS
+                </button>
+                <button type="button" class="btn btn-info" onclick="previewMessage()">
+                    <i class="fas fa-eye me-1"></i>Preview Message
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const recipientRadios = document.querySelectorAll('input[name="recipient_type"]');
+    const classSelection = document.getElementById('class_selection');
+    const studentSelection = document.getElementById('student_selection');
+    
+    recipientRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'class') {
+                classSelection.style.display = 'block';
+                studentSelection.style.display = 'none';
+            } else if (this.value === 'individual') {
+                classSelection.style.display = 'none';
+                studentSelection.style.display = 'block';
+            } else {
+                classSelection.style.display = 'none';
+                studentSelection.style.display = 'none';
+            }
+        });
+    });
+});
+
+function previewMessage() {
+    const message = document.querySelector('textarea[name="message"]').value;
+    const preview = message
+        .replace(/{student_name}/g, 'রহিম আহমেদ')
+        .replace(/{guardian_name}/g, 'মো. করিম উদ্দিন');
+    
+    alert('Message Preview:\n\n' + preview);
+}
+</script>
+{% endblock %}

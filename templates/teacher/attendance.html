@@ -1,0 +1,121 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}হাজিরা{% endblock %}
+{% block page_title %}হাজিরা নিন{% endblock %}
+
+{% block content %}
+<div class="tp-page-header">
+  <h2>শিক্ষার্থীদের হাজিরা</h2>
+  <p>ক্লাস ও তারিখ নির্বাচন করে হাজিরা মার্ক করুন</p>
+</div>
+
+<!-- Filter -->
+<div class="tp-card" style="margin-bottom:1.25rem;">
+  <div class="tp-card-body">
+    <form method="GET" action="{{ url_for('teacher_attendance_view') }}" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;">
+      <div class="tp-form-group" style="flex:1;min-width:160px;margin-bottom:0;">
+        <label class="tp-label">তারিখ</label>
+        <input type="date" name="date" value="{{ date }}" class="tp-input">
+      </div>
+      <div class="tp-form-group" style="flex:1;min-width:180px;margin-bottom:0;">
+        <label class="tp-label">ক্লাস</label>
+        <select name="class_id" class="tp-select">
+          <option value="">ক্লাস নির্বাচন করুন</option>
+          {% for cls in my_classes %}
+          <option value="{{ cls.id }}" {% if cls.id == class_id %}selected{% endif %}>
+            {{ cls.name }} {{ cls.section }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="tp-btn tp-btn-primary" style="height:44px;">
+        <i class="fas fa-search"></i> দেখুন
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if students %}
+<form method="POST" action="{{ url_for('teacher_mark_attendance') }}">
+  <input type="hidden" name="date" value="{{ date }}">
+  <input type="hidden" name="class_id" value="{{ class_id }}">
+
+  <div class="tp-card">
+    <div class="tp-card-header">
+      <div class="tp-card-title">
+        <i class="fas fa-users" style="color:var(--tp-primary)"></i>
+        {{ students|length }} জন শিক্ষার্থী — {{ date }}
+      </div>
+      <div style="display:flex;gap:.5rem;">
+        <button type="button" onclick="markAll('Present')" class="tp-btn tp-btn-sm"
+                style="background:#22c55e;color:#fff;border:none;">সবাই উপস্থিত</button>
+        <button type="button" onclick="markAll('Absent')" class="tp-btn tp-btn-sm"
+                style="background:#ef4444;color:#fff;border:none;">সবাই অনুপস্থিত</button>
+      </div>
+    </div>
+    <div class="tp-card-body" style="padding:0;">
+      <table class="tp-att-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>নাম</th>
+            <th>রোল</th>
+            <th>উপস্থিতি</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          {% set current_status = attendance_records.get(student.id, '') %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td style="font-weight:600;">{{ student.name }}</td>
+            <td style="color:var(--tp-muted);">{{ student.roll_number }}</td>
+            <td>
+              <div class="tp-att-radio">
+                <input type="radio" id="p_{{ student.id }}" name="student_{{ student.id }}" value="Present"
+                       {% if current_status == 'Present' %}checked{% endif %}>
+                <label for="p_{{ student.id }}" class="tp-att-label present">উপস্থিত</label>
+
+                <input type="radio" id="a_{{ student.id }}" name="student_{{ student.id }}" value="Absent"
+                       {% if current_status == 'Absent' %}checked{% endif %}>
+                <label for="a_{{ student.id }}" class="tp-att-label absent">অনুপস্থিত</label>
+
+                <input type="radio" id="l_{{ student.id }}" name="student_{{ student.id }}" value="Late"
+                       {% if current_status == 'Late' %}checked{% endif %}>
+                <label for="l_{{ student.id }}" class="tp-att-label late">দেরিতে</label>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:1rem 1.25rem;border-top:1px solid var(--tp-border);display:flex;justify-content:flex-end;">
+      <button type="submit" class="tp-btn tp-btn-primary">
+        <i class="fas fa-save"></i> হাজিরা সংরক্ষণ করুন
+      </button>
+    </div>
+  </div>
+</form>
+
+{% elif class_id %}
+<div class="tp-card">
+  <div class="tp-card-body" style="text-align:center;padding:3rem;color:var(--tp-muted);">
+    <i class="fas fa-users" style="font-size:2.5rem;opacity:.3;display:block;margin-bottom:1rem;"></i>
+    এই ক্লাসে কোনো শিক্ষার্থী নেই
+  </div>
+</div>
+{% else %}
+<div class="tp-card">
+  <div class="tp-card-body" style="text-align:center;padding:3rem;color:var(--tp-muted);">
+    <i class="fas fa-hand-pointer" style="font-size:2.5rem;opacity:.3;display:block;margin-bottom:1rem;"></i>
+    উপরে ক্লাস নির্বাচন করুন
+  </div>
+</div>
+{% endif %}
+
+<script>
+function markAll(status) {
+  document.querySelectorAll(`input[type="radio"][value="${status}"]`).forEach(r => r.checked = true);
+}
+</script>
+{% endblock %}

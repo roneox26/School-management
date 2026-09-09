@@ -1,0 +1,16 @@
+{
+  "admin:88fb8078-5b73-4198-a0bc-d643160f890b": {
+    "id": "88fb8078-5b73-4198-a0bc-d643160f890b",
+    "username": "7",
+    "email": "7@example.com",
+    "password_hash": "scrypt:32768:8:1$hhNovvdquXiLxtwK$8367175bf588ebfd9d7a95357bd3922391b887b4d908659bea399e72d3764d523980406d4c53039bdd9d75f725111cc4dbde679b02b3afb34e317cd4e24ee054",
+    "created_at": "2026-01-10T06:29:53.281536"
+  },
+  "admin:b0c49e52-ba5d-49cb-9658-40ce16c4b4b9": {
+    "id": "b0c49e52-ba5d-49cb-9658-40ce16c4b4b9",
+    "username": "admin",
+    "email": "admin@example.com",
+    "password_hash": "scrypt:32768:8:1$pwVDYSl8ToA0JDmb$4a08e083c804d90110c555b239d4d9225ca29a6663ebec1f805046d49c3678610a24c6a467e484f3a8b8212b277b39c63f986bbfee24651a348b456d1e1157fb",
+    "created_at": "2026-01-10T06:29:53.405085"
+  }
+}

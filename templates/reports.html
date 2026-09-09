@@ -1,0 +1,197 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-chart-line me-2"></i>Reports & Analytics</h4>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>{{ total_students }}</h5>
+                        <p class="mb-0">Total Students</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>৳{{ "{:,.0f}".format(monthly_collection) }}</h5>
+                        <p class="mb-0">Monthly Collection</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-money-bill-wave fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>{{ today_present }}/{{ today_attendance }}</h5>
+                        <p class="mb-0">Today's Attendance</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>{{ sms_this_month }}</h5>
+                        <p class="mb-0">SMS This Month</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-sms fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Generation -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-chart-bar fa-2x text-primary mb-3"></i>
+                <h5>Attendance Report</h5>
+                <p class="text-muted">Monthly attendance analysis</p>
+                <a href="{{ url_for('generate_report', report_type='attendance') }}" class="btn btn-outline-primary">
+                    Generate Report
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-chalkboard-teacher fa-2x text-success mb-3"></i>
+                <h5>Teacher Attendance</h5>
+                <p class="text-muted">Teacher attendance analysis</p>
+                <a href="{{ url_for('generate_report', report_type='teacher_attendance') }}" class="btn btn-outline-success">
+                    Generate Report
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-money-bill-wave fa-2x text-success mb-3"></i>
+                <h5>Fee Collection</h5>
+                <p class="text-muted">Fee collection summary & dues</p>
+                <a href="{{ url_for('generate_report', report_type='fees') }}" class="btn btn-outline-success">
+                    Generate Report
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-graduation-cap fa-2x text-warning mb-3"></i>
+                <h5>Exam Results</h5>
+                <p class="text-muted">Student performance analysis</p>
+                <a href="{{ url_for('generate_report', report_type='results') }}" class="btn btn-outline-warning">
+                    Generate Report
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-sms fa-2x text-info mb-3"></i>
+                <h5>SMS Analytics</h5>
+                <p class="text-muted">SMS sent, delivery status</p>
+                <a href="{{ url_for('generate_report', report_type='sms') }}" class="btn btn-outline-info">
+                    Generate Report
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Options -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-download me-2"></i>Quick Export Options</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <h6>Student Data Export</h6>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('export_data', data_type='students', format='pdf') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-file-pdf me-1"></i>PDF
+                    </a>
+                    <a href="{{ url_for('export_data', data_type='students', format='csv') }}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-file-csv me-1"></i>CSV
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <h6>Attendance Export</h6>
+                <div class="d-flex gap-2">
+                    <input type="date" class="form-control form-control-sm" id="attendanceDate" style="width: 150px;" value="{{ datetime.now().date() }}">
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportAttendance()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Fees Alert -->
+{% if pending_fees > 0 %}
+<div class="alert alert-warning mt-3">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Pending Fees:</strong> Total ৳{{ "{:,.0f}".format(pending_fees) }} in fees are pending collection.
+    <a href="{{ url_for('fees') }}" class="alert-link">View Details</a>
+</div>
+{% endif %}
+
+<script>
+function exportAttendance() {
+    const date = document.getElementById('attendanceDate').value;
+    if(!date) {
+        alert('Please select a date first!');
+        return;
+    }
+    window.location.href = `/export_data/attendance/csv?date=${date}`;
+}
+</script>
+{% endblock %}

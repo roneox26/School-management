@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <!-- Statistics Cards -->
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_students }}</h4>
+                        <p class="mb-0">Total Students</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_teachers }}</h4>
+                        <p class="mb-0">Total Teachers</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_classes }}</h4>
+                        <p class="mb-0">Total Classes</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-school fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ attendance_percentage }}%</h4>
+                        <p class="mb-0">Today's Attendance</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Fee Collection Card -->
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-money-bill-wave me-2"></i>Fee Collection</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <h6 class="text-success">Collected</h6>
+                        <h4 class="text-success">৳{{ "{:,.0f}".format(collected_fees) }}</h4>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-warning">Pending</h6>
+                        <h4 class="text-warning">৳{{ "{:,.0f}".format(total_fees) }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Attendance Card -->
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-user-check me-2"></i>Teacher Attendance</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h4 class="text-info">{{ teacher_attendance_percentage }}%</h4>
+                    <p class="mb-0">Today's Teacher Attendance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent SMS Logs -->
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-sms me-2"></i>Recent SMS</h5>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                {% if recent_sms %}
+                    {% for sms in recent_sms %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                        <div>
+                            <small class="text-muted">{{ sms.phone_number }}</small>
+                            <p class="mb-0 small">{{ sms.message[:50] }}{% if sms.message|length > 50 %}...{% endif %}</p>
+                        </div>
+                        <span class="badge bg-{% if sms.status == 'sent' %}success{% else %}danger{% endif %}">
+                            {{ sms.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-sms fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No SMS sent yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('add_student') }}" class="btn btn-custom">
+                        <i class="fas fa-user-plus me-2"></i>Add Student
+                    </a>
+                    <a href="{{ url_for('attendance') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-check me-2"></i>Mark Attendance
+                    </a>
+                    <a href="{{ url_for('teacher_attendance') }}" class="btn btn-outline-info">
+                        <i class="fas fa-user-check me-2"></i>Teacher Attendance
+                    </a>
+                    <a href="{{ url_for('fees') }}" class="btn btn-outline-success">
+                        <i class="fas fa-money-bill me-2"></i>Manage Fees
+                    </a>
+                    <a href="{{ url_for('sms_management') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-sms me-2"></i>Send SMS
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts & Analytics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line me-2"></i>Attendance Trend (Last 7 Days)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Fee Collection Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="feeChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-info-circle me-2"></i>System Status</h5>
+                <span class="badge bg-success pulse">Live</span>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <i class="fas fa-database fa-2x text-primary"></i>
+                            <h6>Database</h6>
+                            <span class="badge bg-success">Healthy</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <i class="fas fa-sms fa-2x text-info"></i>
+                            <h6>SMS Service</h6>
+                            <span class="badge bg-success">Active</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <i class="fas fa-users fa-2x text-warning"></i>
+                            <h6>Active Sessions</h6>
+                            <span class="badge bg-info">{{ 1 }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <i class="fas fa-clock fa-2x text-success"></i>
+                            <h6>Uptime</h6>
+                            <span class="badge bg-success" id="uptime">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Smart Notifications -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bell me-2"></i>Smart Notifications</h5>
+            </div>
+            <div class="card-body">
+                <div id="smartNotifications">
+                    <!-- Notifications will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Attendance Chart
+const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+const attendanceChart = new Chart(attendanceCtx, {
+    type: 'line',
+    data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+            label: 'Student Attendance %',
+            data: [85, 92, 78, 88, 90, 75, 82],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.4
+        }, {
+            label: 'Teacher Attendance %',
+            data: [95, 98, 88, 92, 94, 85, 90],
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+// Fee Chart
+const feeCtx = document.getElementById('feeChart').getContext('2d');
+const feeChart = new Chart(feeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Collected', 'Pending', 'Overdue'],
+        datasets: [{
+            data: [{{ collected_fees }}, {{ total_fees - collected_fees }}, 5000],
+            backgroundColor: [
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(255, 99, 132, 0.8)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            }
+        }
+    }
+});
+
+// Smart Notifications System
+function generateSmartNotifications() {
+    const notifications = [];
+
+    // Low attendance alert
+    {% if attendance_percentage < 80 %}
+    notifications.push({
+        type: 'warning',
+        icon: 'fas fa-exclamation-triangle',
+        message: 'Today\'s attendance is {{ attendance_percentage }}% - Below target of 80%',
+        action: 'View Attendance'
+    });
+    {% endif %}
+
+    // Fee collection alert
+    {% if total_fees > 50000 %}
+    notifications.push({
+        type: 'info',
+        icon: 'fas fa-money-bill-wave',
+        message: '৳{{ total_fees }} in pending fees - Send reminders?',
+        action: 'Send SMS Reminders'
+    });
+    {% endif %}
+
+    // Teacher attendance
+    {% if teacher_attendance_percentage < 90 %}
+    notifications.push({
+        type: 'warning',
+        icon: 'fas fa-user-tie',
+        message: 'Teacher attendance is {{ teacher_attendance_percentage }}%',
+        action: 'Check Details'
+    });
+    {% endif %}
+
+    // Recent SMS activity
+    {% if recent_sms|length > 0 %}
+    notifications.push({
+        type: 'success',
+        icon: 'fas fa-sms',
+        message: '{{ recent_sms|length }} SMS sent recently',
+        action: 'View SMS Log'
+    });
+    {% endif %}
+
+    return notifications;
+}
+
+// Render notifications
+function renderNotifications() {
+    const notifications = generateSmartNotifications();
+    const container = document.getElementById('smartNotifications');
+
+    if (notifications.length === 0) {
+        container.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>All systems running smoothly!</div>';
+        return;
+    }
+
+    container.innerHTML = notifications.map(notif => `
+        <div class="alert alert-${notif.type} alert-dismissible fade show" role="alert">
+            <i class="${notif.icon} me-2"></i>
+            ${notif.message}
+            <button type="button" class="btn btn-sm btn-outline-${notif.type} ms-2">${notif.action}</button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `).join('');
+}
+
+// Update uptime
+function updateUptime() {
+    const startTime = new Date('{{ datetime.now() }}');
+    const now = new Date();
+    const diff = now - startTime;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    renderNotifications();
+    updateUptime();
+    setInterval(updateUptime, 60000); // Update every minute
+});
+</script>
+
+<style>
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.status-item {
+    padding: 1rem;
+    margin: 0.5rem 0;
+}
+
+.status-item i {
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}

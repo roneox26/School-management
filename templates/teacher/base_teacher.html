@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}শিক্ষক পোর্টাল{% endblock %} — SchoolMS</title>
+  <meta name="description" content="School Management System — Teacher Portal">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/teacher-portal.css', v='20260908') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="teacher-portal">
+
+  <!-- Sidebar Overlay -->
+  <div class="tp-overlay" id="tpOverlay"></div>
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="tp-sidebar" id="tpSidebar">
+    <a href="{{ url_for('teacher_dashboard') }}" class="tp-sidebar-brand" style="text-decoration:none">
+      <div class="tp-sidebar-brand-icon"><i class="fas fa-graduation-cap"></i></div>
+      <div>
+        <div class="tp-brand-name">SchoolMS</div>
+        <div class="tp-brand-sub">শিক্ষক পোর্টাল</div>
+      </div>
+    </a>
+
+    <nav class="tp-sidebar-nav">
+      <div class="tp-nav-section">Main</div>
+
+      <a href="{{ url_for('teacher_dashboard') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_dashboard' %}active{% endif %}">
+        <i class="fas fa-chart-pie nav-icon"></i><span>ড্যাশবোর্ড</span>
+      </a>
+      <a href="{{ url_for('teacher_classes') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_classes' %}active{% endif %}">
+        <i class="fas fa-users nav-icon"></i><span>আমার ক্লাস</span>
+      </a>
+
+      <div class="tp-nav-section">শিক্ষা কার্যক্রম</div>
+
+      <a href="{{ url_for('teacher_attendance_view') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_attendance_view' %}active{% endif %}">
+        <i class="fas fa-calendar-check nav-icon"></i><span>হাজিরা</span>
+      </a>
+      <a href="{{ url_for('teacher_routine') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_routine' %}active{% endif %}">
+        <i class="fas fa-calendar-alt nav-icon"></i><span>রুটিন</span>
+      </a>
+      <a href="{{ url_for('teacher_homework') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_homework' %}active{% endif %}">
+        <i class="fas fa-book-open nav-icon"></i><span>হোমওয়ার্ক</span>
+      </a>
+      <a href="{{ url_for('teacher_results') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_results' %}active{% endif %}">
+        <i class="fas fa-clipboard-list nav-icon"></i><span>পরীক্ষা ও রেজাল্ট</span>
+      </a>
+
+      <div class="tp-nav-section">যোগাযোগ</div>
+
+      <a href="{{ url_for('teacher_notices') }}"
+         class="tp-nav-link {% if request.endpoint in ['teacher_notices','teacher_create_notice'] %}active{% endif %}">
+        <i class="fas fa-bullhorn nav-icon"></i><span>নোটিশ</span>
+      </a>
+      <a href="{{ url_for('teacher_messages') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_messages' %}active{% endif %}">
+        <i class="fas fa-comment-dots nav-icon"></i><span>বার্তা</span>
+        {% if unread_msg_count is defined and unread_msg_count > 0 %}
+        <span class="tp-nav-badge">{{ unread_msg_count }}</span>
+        {% endif %}
+      </a>
+
+      <div class="tp-nav-section">প্রোফাইল</div>
+
+      <a href="{{ url_for('teacher_profile') }}"
+         class="tp-nav-link {% if request.endpoint == 'teacher_profile' %}active{% endif %}">
+        <i class="fas fa-user-circle nav-icon"></i><span>প্রোফাইল ও ছুটি</span>
+      </a>
+      <a href="{{ url_for('logout') }}" class="tp-nav-link"
+         onclick="return confirm('লগআউট করতে চান?')">
+        <i class="fas fa-sign-out-alt nav-icon"></i><span>লগআউট</span>
+      </a>
+    </nav>
+
+    <div class="tp-sidebar-footer">
+      <div class="tp-sidebar-user">
+        <div class="tp-user-avatar">
+          {{ current_user.username[0].upper() if current_user.is_authenticated else 'T' }}
+        </div>
+        <div>
+          <div class="tp-user-name">{{ current_user.username }}</div>
+          <div class="tp-user-role">শিক্ষক</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN ========== -->
+  <div class="tp-main">
+    <!-- Topbar -->
+    <header class="tp-topbar">
+      <button class="tp-topbar-toggle" id="tpToggle" aria-label="Toggle Sidebar">
+        <i class="fas fa-bars"></i>
+      </button>
+      <h1>{% block page_title %}ড্যাশবোর্ড{% endblock %}</h1>
+      <div class="tp-topbar-actions">
+        <div style="font-size:.78rem;color:var(--tp-muted)" id="tpClock"></div>
+        <a href="{{ url_for('teacher_messages') }}" class="tp-topbar-btn" title="বার্তা">
+          <i class="fas fa-comment-dots"></i>
+        </a>
+        <a href="{{ url_for('logout') }}" class="tp-topbar-btn" title="লগআউট"
+           onclick="return confirm('লগআউট করতে চান?')">
+          <i class="fas fa-sign-out-alt"></i>
+        </a>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="tp-content">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="tp-alert tp-alert-{{ 'error' if category in ['error','danger'] else ('warning' if category == 'warning' else 'success') }}">
+          <i class="fas fa-{{ 'exclamation-circle' if category in ['error','danger'] else ('exclamation-triangle' if category == 'warning' else 'check-circle') }}"></i>
+          {{ message }}
+        </div>
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <script>
+    // Sidebar toggle
+    const sidebar = document.getElementById('tpSidebar');
+    const overlay = document.getElementById('tpOverlay');
+    const toggle  = document.getElementById('tpToggle');
+
+    toggle?.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+    });
+    overlay?.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+    });
+
+    // Live clock
+    const clockEl = document.getElementById('tpClock');
+    const updateClock = () => {
+      if (!clockEl) return;
+      const now = new Date();
+      clockEl.textContent = now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', hour12: true });
+    };
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Auto-dismiss alerts
+    document.querySelectorAll('.tp-alert').forEach(el => {
+      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; setTimeout(() => el.remove(), 400); }, 5000);
+    });
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

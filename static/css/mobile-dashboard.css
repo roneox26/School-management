@@ -1,0 +1,531 @@
+/* ============================================
+   MOBILE-FIRST RESPONSIVE DASHBOARD
+   Smart Pathshala Design
+   ============================================ */
+
+:root {
+    /* Pastel Colors */
+    --mint: #A8E6CF;
+    --peach: #FFD3B6;
+    --blue: #A0D8FF;
+    --lavender: #E4B5FF;
+    --pink: #FFB3BA;
+    --yellow: #FFFFBA;
+    --sky: #B4E7FF;
+    --purple: #DDA0DD;
+    
+    /* Gradients */
+    --gradient-blue: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+    --gradient-mint: linear-gradient(135deg, #A8E6CF 0%, #7FD8BE 100%);
+    --gradient-peach: linear-gradient(135deg, #FFD3B6 0%, #FFC299 100%);
+    
+    /* Neutral */
+    --white: #ffffff;
+    --gray-50: #f8f9fa;
+    --gray-100: #f1f3f5;
+    --gray-200: #e9ecef;
+    --gray-700: #495057;
+    --gray-900: #212529;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
+    
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+}
+
+/* ============================================
+   MOBILE HEADER
+   ============================================ */
+
+.mobile-header {
+    background: var(--gradient-blue);
+    padding: 1rem 1rem 1.5rem;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 1.5rem;
+}
+
+.mobile-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.mobile-header-top h1 {
+    color: var(--white);
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--white);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   SCHOOL INFO CARD
+   ============================================ */
+
+.school-info-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    gap: 1rem;
+}
+
+.school-logo {
+    width: 60px;
+    height: 60px;
+    background: var(--gradient-blue);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.school-logo i {
+    font-size: 2rem;
+    color: var(--white);
+}
+
+.school-details {
+    flex: 1;
+}
+
+.school-details h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+}
+
+.school-year {
+    font-size: 0.85rem;
+    color: var(--gray-700);
+    margin-bottom: 0.75rem;
+}
+
+.school-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--gray-700);
+}
+
+.contact-item i {
+    color: #4FC3F7;
+    font-size: 0.75rem;
+    width: 14px;
+}
+
+/* ============================================
+   FEATURE GRID - MOBILE
+   ============================================ */
+
+.feature-grid-mobile {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 0 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.feature-card-mobile {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card-mobile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.05;
+    z-index: 0;
+}
+
+.feature-card-mobile.mint::before { background: var(--mint); }
+.feature-card-mobile.peach::before { background: var(--peach); }
+.feature-card-mobile.blue::before { background: var(--blue); }
+.feature-card-mobile.lavender::before { background: var(--lavender); }
+.feature-card-mobile.pink::before { background: var(--pink); }
+.feature-card-mobile.yellow::before { background: var(--yellow); }
+.feature-card-mobile.sky::before { background: var(--sky); }
+.feature-card-mobile.purple::before { background: var(--purple); }
+
+.feature-card-mobile:active {
+    transform: scale(0.97);
+    box-shadow: var(--shadow-md);
+}
+
+.feature-icon-mobile {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: var(--white);
+    position: relative;
+    z-index: 1;
+}
+
+.feature-card-mobile.mint .feature-icon-mobile {
+    background: var(--gradient-mint);
+}
+
+.feature-card-mobile.peach .feature-icon-mobile {
+    background: var(--gradient-peach);
+}
+
+.feature-card-mobile.blue .feature-icon-mobile {
+    background: linear-gradient(135deg, #A0D8FF 0%, #7FC8FF 100%);
+}
+
+.feature-card-mobile.lavender .feature-icon-mobile {
+    background: linear-gradient(135deg, #E4B5FF 0%, #D49FFF 100%);
+}
+
+.feature-card-mobile.pink .feature-icon-mobile {
+    background: linear-gradient(135deg, #FFB3BA 0%, #FF9DA5 100%);
+}
+
+.feature-card-mobile.yellow .feature-icon-mobile {
+    background: linear-gradient(135deg, #FFE66D 0%, #FFD93D 100%);
+}
+
+.feature-card-mobile.sky .feature-icon-mobile {
+    background: linear-gradient(135deg, #B4E7FF 0%, #9FDDFF 100%);
+}
+
+.feature-card-mobile.purple .feature-icon-mobile {
+    background: linear-gradient(135deg, #DDA0DD 0%, #D18AD1 100%);
+}
+
+.badge-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #FF6B6B;
+    color: var(--white);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.feature-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    line-height: 1.3;
+    z-index: 1;
+}
+
+/* ============================================
+   QUICK STATS
+   ============================================ */
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 0 1rem 2rem;
+}
+
+.stat-item {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--white);
+    flex-shrink: 0;
+}
+
+.stat-icon.mint { background: var(--gradient-mint); }
+.stat-icon.peach { background: var(--gradient-peach); }
+.stat-icon.blue { background: linear-gradient(135deg, #A0D8FF 0%, #7FC8FF 100%); }
+.stat-icon.yellow { background: linear-gradient(135deg, #FFE66D 0%, #FFD93D 100%); }
+
+.stat-info h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 0.25rem;
+}
+
+.stat-info p {
+    font-size: 0.85rem;
+    color: var(--gray-700);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Small Mobile (320px - 374px) */
+@media (max-width: 374px) {
+    .mobile-header-top h1 {
+        font-size: 1.25rem;
+    }
+    
+    .school-details h2 {
+        font-size: 0.9rem;
+    }
+    
+    .contact-item {
+        font-size: 0.75rem;
+    }
+    
+    .feature-grid-mobile {
+        gap: 0.75rem;
+        padding: 0 0.75rem;
+    }
+    
+    .feature-card-mobile {
+        padding: 1rem;
+    }
+    
+    .feature-icon-mobile {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+    
+    .feature-label {
+        font-size: 0.8rem;
+    }
+}
+
+/* Medium Mobile (375px - 480px) */
+@media (min-width: 375px) and (max-width: 480px) {
+    .feature-grid-mobile {
+        gap: 1rem;
+    }
+}
+
+/* Large Mobile & Tablet (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .mobile-header {
+        padding: 1.5rem 1.5rem 2rem;
+    }
+    
+    .feature-grid-mobile {
+        grid-template-columns: repeat(3, 1fr);
+        padding: 0 1.5rem;
+    }
+    
+    .quick-stats {
+        grid-template-columns: repeat(4, 1fr);
+        padding: 0 1.5rem 2rem;
+    }
+}
+
+/* Tablet & Small Desktop (769px - 1024px) */
+@media (min-width: 769px) {
+    body {
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+    
+    .container {
+        max-width: 480px;
+        width: 100%;
+    }
+    
+    .mobile-header {
+        border-radius: var(--radius-xl);
+    }
+    
+    .feature-grid-mobile {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .quick-stats {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Desktop (1025px+) */
+@media (min-width: 1025px) {
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .container {
+        max-width: 420px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        background: var(--gray-50);
+    }
+    
+    .mobile-header {
+        border-radius: 0;
+    }
+}
+
+/* Landscape Mode */
+@media (orientation: landscape) and (max-height: 600px) {
+    .mobile-header {
+        padding: 1rem;
+    }
+    
+    .school-info-card {
+        padding: 1rem;
+    }
+    
+    .feature-grid-mobile {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+    
+    .feature-card-mobile {
+        padding: 1rem;
+    }
+    
+    .feature-icon-mobile {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.feature-card-mobile {
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.feature-card-mobile:nth-child(1) { animation-delay: 0.05s; }
+.feature-card-mobile:nth-child(2) { animation-delay: 0.1s; }
+.feature-card-mobile:nth-child(3) { animation-delay: 0.15s; }
+.feature-card-mobile:nth-child(4) { animation-delay: 0.2s; }
+.feature-card-mobile:nth-child(5) { animation-delay: 0.25s; }
+.feature-card-mobile:nth-child(6) { animation-delay: 0.3s; }
+.feature-card-mobile:nth-child(7) { animation-delay: 0.35s; }
+.feature-card-mobile:nth-child(8) { animation-delay: 0.4s; }
+
+/* ============================================
+   TOUCH FEEDBACK
+   ============================================ */
+
+@media (hover: none) and (pointer: coarse) {
+    .feature-card-mobile:active,
+    .icon-btn:active {
+        transition: transform 0.1s ease;
+    }
+}
+
+/* ============================================
+   SAFE AREA (for notched devices)
+   ============================================ */
+
+@supports (padding: max(0px)) {
+    body {
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-right: max(0px, env(safe-area-inset-right));
+    }
+    
+    .mobile-header {
+        padding-top: max(1rem, env(safe-area-inset-top));
+    }
+}

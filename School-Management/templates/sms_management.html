@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+```
+```
+{% block page_title %}SMS Management{% endblock %}
+```
+```
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h5><i class="fas fa-envelope me-2"></i>SMS Templates</h5>
+                <a href="{{ url_for('add_sms_template') }}" class="btn btn-custom btn-sm">
+                    <i class="fas fa-plus me-1"></i>New Template
+                </a>
+            </div>
+            <div class="card-body">
+                {% if templates %}
+                    {% for template in templates %}
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6>{{ template.name }}</h6>
+                                <span class="badge bg-primary">{{ template.template_type.replace('_', ' ').title() }}</span>
+                                <p class="mt-2 mb-1">{{ template.message[:100] }}{% if template.message|length > 100 %}...{% endif %}</p>
+                            </div>
+                            <div class="btn-group">
+                                <a href="{{ url_for('send_sms_page', template_id=template.id) }}" class="btn btn-success btn-sm" title="Send SMS">
+                                    <i class="fas fa-paper-plane"></i>
+                                </a>
+                                <a href="{{ url_for('view_sms_template', id=template.id) }}" class="btn btn-info btn-sm" title="View Template">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_sms_template', id=template.id) }}" class="btn btn-warning btn-sm" title="Edit Template">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-danger btn-sm" onclick="deleteTemplate({{ template.id }})" title="Delete Template">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-envelope fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No templates created yet.</p>
+                        <a href="{{ url_for('add_sms_template') }}" class="btn btn-custom btn-sm">
+                            <i class="fas fa-plus me-1"></i>Create First Template
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history me-2"></i>Recent SMS Logs</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td>{{ log.recipient_phone }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if log.status == 'sent' else 'danger' }}">
+                                            {{ log.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ log.sent_at.strftime('%d/%m %H:%M') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-sms fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No SMS sent yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-magic me-2"></i>Smart Features</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center p-3">
+                            <i class="fas fa-robot fa-2x text-primary mb-3"></i>
+                            <h6>Auto Fee Reminders</h6>
+                            <p class="small text-muted">Automatically send fee due reminders</p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="alert('Feature will be implemented with cron jobs!')">
+                                Setup Auto SMS
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3">
+                            <i class="fas fa-calendar fa-2x text-warning mb-3"></i>
+                            <h6>Exam Reminders</h6>
+                            <p class="small text-muted">Send reminders 3 days before exams</p>
+                            <button class="btn btn-outline-warning btn-sm" onclick="alert('Feature will auto-trigger based on exam dates!')">
+                                Configure Alerts
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3">
+                            <i class="fas fa-birthday-cake fa-2x text-success mb-3"></i>
+                            <h6>Birthday Wishes</h6>
+                            <p class="small text-muted">Auto birthday SMS to students</p>
+                            <button class="btn btn-outline-success btn-sm" onclick="alert('Will send automatic birthday wishes!')">
+                                Enable Birthday SMS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteTemplate(templateId) {
+    if (confirm('আপনি কি এই টেমপ্লেটটি ডিলিট করতে চান? এই কাজটি পূর্বাবস্থায় ফিরিয়ে আনা যাবে না।')) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete_sms_template/' + templateId;
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name=csrf-token]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

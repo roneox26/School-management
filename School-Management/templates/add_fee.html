@@ -1,0 +1,78 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}Add Fee{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-plus me-2"></i>Add New Fee</h4>
+    <a href="{{ url_for('fees') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Fees
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-custom text-white">
+                <h5 class="mb-0"><i class="fas fa-money-bill me-2"></i>Fee Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Student</label>
+                            <select name="student_id" class="form-select" required>
+                                <option value="">Select Student</option>
+                                {% for student in students %}
+                                    <option value="{{ student.id }}">{{ student.name }} ({{ student.roll_number }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Fee Type</label>
+                            <select name="fee_type" class="form-select" required>
+                                <option value="">Select Fee Type</option>
+                                <option value="Monthly">Monthly Fee</option>
+                                <option value="Exam">Exam Fee</option>
+                                <option value="Transport">Transport Fee</option>
+                                <option value="Admission">Admission Fee</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Amount (৳)</label>
+                            <input type="number" class="form-control" name="amount" required min="1" step="0.01">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Due Date</label>
+                            <input type="date" class="form-control" name="due_date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('fees') }}" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-custom">
+                            <i class="fas fa-save me-2"></i>Add Fee
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.required::after {
+    content: " *";
+    color: red;
+}
+</style>
+{% endblock %}

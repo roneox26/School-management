@@ -1,0 +1,82 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}নোটিশ বোর্ড{% endblock %}
+{% block page_title %}নোটিশ বোর্ড{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:1.25rem;flex-wrap:wrap;">
+
+  <!-- Create Notice Form -->
+  <div class="tp-card tp-animate" style="height:fit-content;">
+    <div class="tp-card-header">
+      <div class="tp-card-title"><i class="fas fa-plus-circle" style="color:var(--tp-primary)"></i> নোটিশ তৈরি করুন</div>
+    </div>
+    <div class="tp-card-body">
+      <form method="POST" action="{{ url_for('teacher_create_notice') }}">
+        <div style="margin-bottom:.875rem;">
+          <label class="tp-label">শিরোনাম</label>
+          <input type="text" name="title" required class="tp-input" placeholder="নোটিশের শিরোনাম">
+        </div>
+        <div style="margin-bottom:.875rem;">
+          <label class="tp-label">ক্লাস নির্বাচন</label>
+          <select name="class_id" class="tp-input">
+            <option value="">সব ক্লাস</option>
+            {% for c in my_classes %}
+            <option value="{{ c.id }}">{{ c.name }} {{ c.section }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label class="tp-label">বার্তা</label>
+          <textarea name="body" required class="tp-input" rows="4" placeholder="নোটিশের বিস্তারিত..."></textarea>
+        </div>
+        <button type="submit" class="tp-btn tp-btn-primary" style="width:100%;">
+          <i class="fas fa-bullhorn"></i> নোটিশ প্রকাশ করুন
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notices List -->
+  <div>
+    <div class="tp-card tp-animate">
+      <div class="tp-card-header">
+        <div class="tp-card-title"><i class="fas fa-list" style="color:var(--tp-primary)"></i> সকল নোটিশ</div>
+        <span style="font-size:.75rem;color:var(--tp-muted);font-weight:500;">{{ notices|length }} টি</span>
+      </div>
+      <div class="tp-card-body">
+        {% if notices %}
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+          {% for notice in notices %}
+          <div style="border-left:4px solid {{ '#0d9488' if notice.created_by == current_user.id else '#6366f1' }};border-radius:0 12px 12px 0;background:var(--tp-bg);padding:.875rem 1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+              <div style="flex:1;">
+                <div style="font-size:.9rem;font-weight:700;color:var(--tp-text);">{{ notice.title }}</div>
+                <div style="font-size:.75rem;color:var(--tp-muted);margin-top:.25rem;">
+                  <span><i class="fas fa-user"></i> {{ notice.created_by_name or 'Admin' }}</span>
+                  {% if notice.created_by_role == 'teacher' %}
+                  <span style="background:#d1fae5;color:#065f46;border-radius:4px;padding:.1rem .4rem;margin-left:.4rem;font-size:.65rem;font-weight:700;">শিক্ষক</span>
+                  {% endif %}
+                  <span style="margin-left:.5rem;"><i class="fas fa-clock"></i> {{ notice.created_at[:10] }}</span>
+                </div>
+                {% if notice.body %}
+                <div style="font-size:.8rem;color:var(--tp-muted);margin-top:.5rem;line-height:1.5;">
+                  {{ notice.body[:150] }}{% if notice.body|length > 150 %}...{% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--tp-muted);">
+          <i class="fas fa-bullhorn" style="font-size:2.5rem;opacity:.3;display:block;margin-bottom:.75rem;"></i>
+          কোনো নোটিশ নেই
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

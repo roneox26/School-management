@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard - School Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Modern Header Section with Blue Gradient -->
+    <div class="header-section">
+        <div class="header-content">
+            <!-- School Logo Section -->
+            <div class="header-logo">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏫</div>
+                <p style="font-size: 0.875rem; opacity: 0.9;">School Portal</p>
+            </div>
+
+            <!-- School Info Section -->
+            <div class="header-info">
+                <h1>Excellence Academy</h1>
+                <p>School Management System</p>
+                <p style="font-size: 0.75rem; opacity: 0.85;">Empowering Education Excellence</p>
+            </div>
+
+            <!-- Contact Info Section -->
+            <div class="header-contact">
+                <div class="header-contact-item">
+                    <i class="fas fa-phone"></i>
+                    <span>+880 1234-567890</span>
+                </div>
+                <div class="header-contact-item">
+                    <i class="fas fa-envelope"></i>
+                    <span>info@school.edu</span>
+                </div>
+                <div class="header-contact-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Your City, Country</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Grid Section -->
+    <h2 style="margin-bottom: 2rem; color: #2d3748; font-weight: 700;">Quick Access</h2>
+    
+    <div class="dashboard-grid">
+        <!-- Student Attendance Card -->
+        <div class="feature-card mint">
+            <div class="icon-circle mint">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <h3 class="feature-card-title">Student Attendance</h3>
+            <p class="feature-card-description">Mark and track student attendance records</p>
+            <div class="feature-card-stats">
+                <div>
+                    <div class="stat-value">{{ attendance_percentage }}%</div>
+                    <div class="stat-label">Today</div>
+                </div>
+                <div style="margin-left: auto;">
+                    <a href="{{ url_for('attendance') }}" class="btn btn-modern btn-modern-primary" style="font-size: 0.75rem; padding: 0.5rem 1rem;">
+                        View <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounts/Finance Card -->
+        <div class="feature-card orange">
+            <div class="icon-circle orange">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <h3 class="feature-card-title">Fee Management</h3>
+            <p class="feature-card-description">Manage and track fee collections</p>
+            <div class="feature-card-stats">
+                <div>
+                    <div class="stat-value">৳{{ "{:,.0f}".format(total_fees) }}</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div style="margin-left: auto;">
+                    <a href="{{ url_for('fees') }}" class="btn btn-modern btn-modern-primary" style="font-size: 0.75rem; padding: 0.5rem 1rem;">
+                        View <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exam Results Card -->
+        <div class="feature-card blue">
+            <div class="icon-circle blue">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h3 class="feature-card-title">Exam Results</h3>
+            <p class="feature-card-description">Publish and view exam results</p>
+            <div class="feature-card-stats">
+                <div>
+                    <div class="stat-value">{{ total_classes }}</div>
+                    <div class="stat-label">Classes</div>
+                </div>
+                <div style="margin-left: auto;">
+                    <a href="{{ url_for('exams') }}" class="btn btn-modern btn-modern-primary" style="font-size: 0.75rem; padding: 0.5rem 1rem;">
+                        View <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Card -->
+        <div class="feature-card pink">
+            <div class="icon-circle pink">
+                <i class="fas fa-bell"></i>
+            </div>
+            <h3 class="feature-card-title">Notifications</h3>
+            <p class="feature-card-description">Send SMS and email alerts</p>
+            <div class="feature-card-stats">
+                <div>
+                    <div class="stat-value">{{ sms_sent_today }}</div>
+                    <div class="stat-label">Today</div>
+                </div>
+                <div style="margin-left: auto;">
+                    <a href="{{ url_for('sms_management') }}" class="btn btn-modern btn-modern-primary" style="font-size: 0.75rem; padding: 0.5rem 1rem;">
+                        Send <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <h2 style="margin-top: 3rem; margin-bottom: 2rem; color: #2d3748; font-weight: 700;">System Overview</h2>
+    
+    <div class="row mb-4">
+        <!-- Total Students -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <h3>{{ total_students }}</h3>
+                    <p>Total Students</p>
+                </div>
+                <div class="stat-card-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Teachers -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <h3>{{ total_teachers }}</h3>
+                    <p>Total Teachers</p>
+                </div>
+                <div class="stat-card-icon">
+                    <i class="fas fa-chalkboard-user"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Classes -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <h3>{{ total_classes }}</h3>
+                    <p>Total Classes</p>
+                </div>
+                <div class="stat-card-icon">
+                    <i class="fas fa-school"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fee Collected -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <h3>৳{{ "{:,.0f}".format(collected_fees) }}</h3>
+                    <p>Fees Collected</p>
+                </div>
+                <div class="stat-card-icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row">
+        <!-- Teacher Attendance -->
+        <div class="col-lg-6 mb-4">
+            <div class="card" style="border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 1.5rem;">
+                    <h5 style="margin: 0; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-user-check"></i> Teacher Attendance Today
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 1.5rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: #667eea; margin-bottom: 0.5rem;">
+                            {{ teacher_attendance_percentage }}%
+                        </div>
+                        <p style="color: #718096; margin: 0;">of {{ total_teachers }} teachers present</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-lg-6 mb-4">
+            <div class="card" style="border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 1.5rem;">
+                    <h5 style="margin: 0; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 1.5rem;">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('add_student') }}" class="btn btn-modern btn-modern-primary" style="justify-content: center;">
+                            <i class="fas fa-user-plus"></i> Add Student
+                        </a>
+                        <a href="{{ url_for('add_teacher') }}" class="btn btn-modern btn-modern-primary" style="justify-content: center;">
+                            <i class="fas fa-person-chalkboard"></i> Add Teacher
+                        </a>
+                        <a href="{{ url_for('reports') }}" class="btn btn-modern btn-modern-secondary" style="justify-content: center;">
+                            <i class="fas fa-chart-bar"></i> View Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent SMS Activity -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card" style="border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 1.5rem;">
+                    <h5 style="margin: 0; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-sms"></i> Recent SMS Activity
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 1.5rem; max-height: 400px; overflow-y: auto;">
+                    {% if recent_sms %}
+                        <div class="table-modern">
+                            <table style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Phone Number</th>
+                                        <th>Message</th>
+                                        <th>Status</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sms in recent_sms[:10] %}
+                                    <tr>
+                                        <td>{{ sms.phone_number }}</td>
+                                        <td><small>{{ sms.message[:40] }}{% if sms.message|length > 40 %}...{% endif %}</small></td>
+                                        <td>
+                                            <span class="badge" style="background: {% if sms.status == 'sent' %}#a8e6cf{% else %}#ffb3d9{% endif %}; color: #2d3748; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                                {{ sms.status }}
+                                            </span>
+                                        </td>
+                                        <td><small style="color: #a0aec0;">{{ sms.get('sent_at', 'N/A')[:10] }}</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div style="text-align: center; padding: 2rem;">
+                            <i class="fas fa-sms" style="font-size: 2.5rem; opacity: 0.4; margin-bottom: 1rem; display: block;"></i>
+                            <p style="color: #718096; margin: 0;">No SMS messages sent yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Ensure Bootstrap grid system */
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+        .header-content {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .dashboard-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .stat-card {
+            margin-bottom: 1rem;
+        }
+    }
+
+    /* Badge styling */
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Card hover effects */
+    .card {
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+    }
+</style>
+{% endblock %}

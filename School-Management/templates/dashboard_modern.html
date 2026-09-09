@@ -1,0 +1,764 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Dashboard Header ── */
+    .dash-header {
+        background: var(--gradient-primary);
+        border-radius: var(--radius-2xl);
+        padding: 2rem 2.5rem;
+        margin-bottom: 1.75rem;
+        position: relative;
+        overflow: hidden;
+        color: white;
+    }
+
+    .dash-header::before {
+        content: '';
+        position: absolute;
+        top: -60%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255, 255, 255, .12) 0%, transparent 65%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .dash-header::after {
+        content: '';
+        position: absolute;
+        bottom: -50%;
+        left: -5%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255, 255, 255, .07) 0%, transparent 65%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .dash-header-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .dash-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .dash-school-icon {
+        width: 68px;
+        height: 68px;
+        background: rgba(255, 255, 255, .2);
+        border: 1.5px solid rgba(255, 255, 255, .3);
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        flex-shrink: 0;
+        backdrop-filter: blur(10px);
+    }
+
+    .dash-school-name {
+        font-size: 1.625rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+    }
+
+    .dash-school-meta {
+        font-size: .875rem;
+        color: rgba(255, 255, 255, .8);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .dash-meta-item {
+        display: flex;
+        align-items: center;
+        gap: .375rem;
+    }
+
+    .dash-date-badge {
+        background: rgba(255, 255, 255, .15);
+        border: 1px solid rgba(255, 255, 255, .25);
+        border-radius: 1rem;
+        padding: .5rem 1.25rem;
+        text-align: center;
+        backdrop-filter: blur(10px);
+    }
+
+    .dash-date-day {
+        font-size: 2rem;
+        font-weight: 800;
+        color: white;
+        line-height: 1;
+    }
+
+    .dash-date-month {
+        font-size: .75rem;
+        color: rgba(255, 255, 255, .75);
+        text-transform: uppercase;
+        letter-spacing: .1em;
+    }
+
+    /* ── Stats Grid ── */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
+    }
+
+    @media (max-width: 1200px) {
+        .stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 576px) {
+        .stats-row {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: var(--radius-xl);
+        padding: 1.375rem;
+        border: 1px solid var(--neutral-200);
+        box-shadow: var(--shadow-sm);
+        transition: all var(--ease-base);
+        position: relative;
+        overflow: hidden;
+        cursor: default;
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--kpi-color);
+        border-radius: var(--radius-full) var(--radius-full) 0 0;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: transparent;
+    }
+
+    .kpi-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-lg);
+        background: var(--kpi-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.125rem;
+        color: var(--kpi-fg);
+    }
+
+    .kpi-trend {
+        font-size: .75rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+
+    .kpi-trend.positive {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .kpi-trend.neutral {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .kpi-value {
+        font-size: 1.875rem;
+        font-weight: 800;
+        color: var(--neutral-900);
+        line-height: 1;
+        margin-bottom: 4px;
+        letter-spacing: -1px;
+    }
+
+    .kpi-label {
+        font-size: .8125rem;
+        color: var(--neutral-500);
+        font-weight: 500;
+    }
+
+    .kpi-divider {
+        height: 1px;
+        background: var(--neutral-100);
+        margin: .875rem 0;
+    }
+
+    .kpi-footer {
+        font-size: .75rem;
+        color: var(--neutral-500);
+        display: flex;
+        align-items: center;
+        gap: .375rem;
+    }
+
+    /* ── Bottom Two-Column ── */
+    .dash-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+        .dash-grid-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ── Feature Grid ── */
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
+    }
+
+    @media (max-width: 1100px) {
+        .features-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 576px) {
+        .features-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .feat-card {
+        background: white;
+        border: 1px solid var(--neutral-200);
+        border-radius: var(--radius-xl);
+        padding: 1.5rem 1.25rem;
+        text-align: center;
+        transition: all var(--ease-base);
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .75rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feat-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--feat-color);
+        transform: scaleX(0);
+        transition: transform var(--ease-base);
+        transform-origin: left;
+    }
+
+    .feat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+        border-color: transparent;
+    }
+
+    .feat-card:hover::after {
+        transform: scaleX(1);
+    }
+
+    .feat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-xl);
+        background: var(--feat-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.375rem;
+        color: var(--feat-fg);
+    }
+
+    .feat-name {
+        font-size: .875rem;
+        font-weight: 700;
+        color: var(--neutral-900);
+        line-height: 1.3;
+    }
+
+    .feat-desc {
+        font-size: .75rem;
+        color: var(--neutral-500);
+        line-height: 1.5;
+    }
+
+    /* ── Summary Cards ── */
+    .summary-card {
+        background: white;
+        border: 1px solid var(--neutral-200);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .summary-card-header {
+        padding: 1.125rem 1.5rem;
+        border-bottom: 1px solid var(--neutral-100);
+        background: var(--neutral-50);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .summary-card-title {
+        display: flex;
+        align-items: center;
+        gap: .625rem;
+        font-size: .9375rem;
+        font-weight: 700;
+        color: var(--neutral-900);
+    }
+
+    .summary-card-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: var(--radius-md);
+        background: var(--gradient-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: .8125rem;
+    }
+
+    .summary-card-body {
+        padding: 1.5rem;
+    }
+
+    .fee-summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .fee-item-label {
+        font-size: .75rem;
+        color: var(--neutral-500);
+        font-weight: 500;
+        margin-bottom: .25rem;
+    }
+
+    .fee-item-value {
+        font-size: 1.375rem;
+        font-weight: 800;
+        letter-spacing: -.5px;
+    }
+
+    .fee-item-value.success {
+        color: var(--color-success);
+    }
+
+    .fee-item-value.warning {
+        color: var(--color-warning);
+    }
+
+    /* ── SMS Log List ── */
+    .sms-log-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .sms-log-item {
+        display: flex;
+        align-items: flex-start;
+        gap: .875rem;
+        padding: .875rem 0;
+        border-bottom: 1px solid var(--neutral-100);
+    }
+
+    .sms-log-item:last-child {
+        border-bottom: none;
+    }
+
+    .sms-log-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius-lg);
+        background: #ede9fe;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .875rem;
+        color: #7c3aed;
+        flex-shrink: 0;
+    }
+
+    .sms-log-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sms-log-to {
+        font-size: .8125rem;
+        font-weight: 600;
+        color: var(--neutral-800);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sms-log-msg {
+        font-size: .75rem;
+        color: var(--neutral-500);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sms-log-time {
+        font-size: .7rem;
+        color: var(--neutral-400);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dash-header animate-in">
+    <div class="dash-header-content">
+        <div class="dash-header-left">
+            <div class="dash-school-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div>
+                <div class="dash-school-name">School Management System</div>
+                <div class="dash-school-meta">
+                    <div class="dash-meta-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Academic Year 2025–2026</span>
+                    </div>
+                    <div class="dash-meta-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Dhaka, Bangladesh</span>
+                    </div>
+                    <div class="dash-meta-item">
+                        <i class="fas fa-phone"></i>
+                        <span>+880 1700 000000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dash-date-badge">
+            <div class="dash-date-day" id="dash-day">--</div>
+            <div class="dash-date-month" id="dash-month">---</div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Stats Row -->
+<div class="stats-row">
+    <!-- Students -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-primary);--kpi-bg:#ede9fe;--kpi-fg:#7c3aed;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-user-graduate"></i></div>
+            <div class="kpi-trend positive"><i class="fas fa-arrow-up"></i> Active</div>
+        </div>
+        <div class="kpi-value" data-counter="{{ total_students }}">{{ total_students }}</div>
+        <div class="kpi-label">Total Students</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-circle" style="color:var(--color-success);font-size:.5rem"></i> All
+            enrolled students</div>
+    </div>
+
+    <!-- Teachers -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-success);--kpi-bg:#d1fae5;--kpi-fg:#059669;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+            <div class="kpi-trend positive"><i class="fas fa-arrow-up"></i> Active</div>
+        </div>
+        <div class="kpi-value" data-counter="{{ total_teachers }}">{{ total_teachers }}</div>
+        <div class="kpi-label">Total Teachers</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-circle" style="color:var(--color-success);font-size:.5rem"></i>
+            Professional staff</div>
+    </div>
+
+    <!-- Classes -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-info);--kpi-bg:#dbeafe;--kpi-fg:#2563eb;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="kpi-trend neutral"><i class="fas fa-minus"></i> Stable</div>
+        </div>
+        <div class="kpi-value" data-counter="{{ total_classes }}">{{ total_classes }}</div>
+        <div class="kpi-label">Total Classes</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-circle" style="color:var(--color-info);font-size:.5rem"></i> All
+            sections active</div>
+    </div>
+
+    <!-- Attendance -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-warning);--kpi-bg:#fef3c7;--kpi-fg:#d97706;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-calendar-check"></i></div>
+            <div class="kpi-trend positive"><i class="fas fa-arrow-up"></i> Today</div>
+        </div>
+        <div class="kpi-value">{{ attendance_percentage }}%</div>
+        <div class="kpi-label">Today's Attendance</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-users" style="color:var(--color-warning)"></i> {{ today_attendance
+            }}/{{ total_students }} present</div>
+    </div>
+</div>
+
+<!-- Second Stats Row -->
+<div class="stats-row" style="margin-top:0;margin-bottom:1.75rem;">
+    <!-- Collected Fees -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-success);--kpi-bg:#d1fae5;--kpi-fg:#059669;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="kpi-trend positive"><i class="fas fa-arrow-up"></i> Paid</div>
+        </div>
+        <div class="kpi-value">৳{{ "{:,.0f}".format(collected_fees) }}</div>
+        <div class="kpi-label">Collected Fees</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-check" style="color:var(--color-success)"></i> Successfully collected
+        </div>
+    </div>
+
+    <!-- Pending Fees -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-warning);--kpi-bg:#fef3c7;--kpi-fg:#d97706;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="kpi-trend neutral"><i class="fas fa-clock"></i> Pending</div>
+        </div>
+        <div class="kpi-value">৳{{ "{:,.0f}".format(total_fees) }}</div>
+        <div class="kpi-label">Pending Fees</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-hourglass-half" style="color:var(--color-warning)"></i> Unpaid dues
+        </div>
+    </div>
+
+    <!-- Teacher Attendance -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-primary);--kpi-bg:#ede9fe;--kpi-fg:#7c3aed;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
+            <div class="kpi-trend positive"><i class="fas fa-arrow-up"></i> Today</div>
+        </div>
+        <div class="kpi-value">{{ teacher_attendance_percentage }}%</div>
+        <div class="kpi-label">Teacher Attendance</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-users-cog" style="color:#7c3aed"></i> {{ teacher_present }}/{{
+            total_teachers }} present</div>
+    </div>
+
+    <!-- SMS -->
+    <div class="kpi-card animate-in" style="--kpi-color:var(--gradient-danger);--kpi-bg:#fce7f3;--kpi-fg:#be185d;">
+        <div class="kpi-top">
+            <div class="kpi-icon"><i class="fas fa-comment-sms"></i></div>
+            <div class="kpi-trend neutral"><i class="fas fa-paper-plane"></i> Today</div>
+        </div>
+        <div class="kpi-value" data-counter="{{ sms_sent_today|default(0) }}">{{ sms_sent_today|default(0) }}</div>
+        <div class="kpi-label">SMS Sent Today</div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-footer"><i class="fas fa-broadcast-tower" style="color:#be185d"></i> Communications</div>
+    </div>
+</div>
+
+<!-- Quick Access Feature Cards -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 style="font-size:1.1rem;font-weight:700;color:var(--neutral-900);letter-spacing:-.3px;">
+        <i class="fas fa-th-large me-2" style="color:var(--brand-primary)"></i>Quick Access
+    </h2>
+</div>
+
+<div class="features-grid">
+    <a href="{{ url_for('attendance') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-primary);--feat-bg:#ede9fe;--feat-fg:#7c3aed;">
+        <div class="feat-icon"><i class="fas fa-clipboard-check"></i></div>
+        <div class="feat-name">Student Attendance</div>
+        <div class="feat-desc">Mark & track daily attendance</div>
+    </a>
+
+    <a href="{{ url_for('fees') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-success);--feat-bg:#d1fae5;--feat-fg:#059669;">
+        <div class="feat-icon"><i class="fas fa-wallet"></i></div>
+        <div class="feat-name">Fees & Finance</div>
+        <div class="feat-desc">Manage payments & records</div>
+    </a>
+
+    <a href="{{ url_for('exams') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-warning);--feat-bg:#fef3c7;--feat-fg:#d97706;">
+        <div class="feat-icon"><i class="fas fa-graduation-cap"></i></div>
+        <div class="feat-name">Exams & Results</div>
+        <div class="feat-desc">Record & publish exam scores</div>
+    </a>
+
+    <a href="{{ url_for('sms_management') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-danger);--feat-bg:#fce7f3;--feat-fg:#be185d;">
+        <div class="feat-icon"><i class="fas fa-bell"></i></div>
+        <div class="feat-name">Notifications & SMS</div>
+        <div class="feat-desc">Send messages to parents</div>
+    </a>
+
+    <a href="{{ url_for('students') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-info);--feat-bg:#dbeafe;--feat-fg:#2563eb;">
+        <div class="feat-icon"><i class="fas fa-user-graduate"></i></div>
+        <div class="feat-name">Student Management</div>
+        <div class="feat-desc">Add, edit, manage students</div>
+    </a>
+
+    <a href="{{ url_for('teachers') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-primary);--feat-bg:#ede9fe;--feat-fg:#7c3aed;">
+        <div class="feat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="feat-name">Teacher Management</div>
+        <div class="feat-desc">Staff profiles & schedules</div>
+    </a>
+
+    <a href="{{ url_for('classes') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-success);--feat-bg:#d1fae5;--feat-fg:#059669;">
+        <div class="feat-icon"><i class="fas fa-layer-group"></i></div>
+        <div class="feat-name">Class Management</div>
+        <div class="feat-desc">Create & manage classes</div>
+    </a>
+
+    <a href="{{ url_for('reports') }}" class="feat-card animate-in"
+        style="--feat-color:var(--gradient-warning);--feat-bg:#fef3c7;--feat-fg:#d97706;">
+        <div class="feat-icon"><i class="fas fa-chart-bar"></i></div>
+        <div class="feat-name">Reports & Analytics</div>
+        <div class="feat-desc">Generate & export reports</div>
+    </a>
+</div>
+
+<!-- Bottom 2-Column -->
+<div class="dash-grid-2">
+    <!-- Fee Summary -->
+    <div class="summary-card animate-in">
+        <div class="summary-card-header">
+            <div class="summary-card-title">
+                <div class="summary-card-icon"><i class="fas fa-money-bill-wave"></i></div>
+                Fee Collection Summary
+            </div>
+            <a href="{{ url_for('fees') }}" class="btn btn-sm btn-ghost">View All →</a>
+        </div>
+        <div class="summary-card-body">
+            <div class="fee-summary-grid">
+                <div>
+                    <div class="fee-item-label">Collected This Month</div>
+                    <div class="fee-item-value success">৳{{ "{:,.0f}".format(collected_fees) }}</div>
+                </div>
+                <div>
+                    <div class="fee-item-label">Pending Amount</div>
+                    <div class="fee-item-value warning">৳{{ "{:,.0f}".format(total_fees) }}</div>
+                </div>
+            </div>
+            {% set total_fee_amount = collected_fees + total_fees %}
+            {% if total_fee_amount > 0 %}
+            <div>
+                <div
+                    style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--neutral-500);margin-bottom:.5rem;">
+                    <span>Collection Rate</span>
+                    <span>{{ "{:.0f}".format((collected_fees / total_fee_amount) * 100) }}%</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar success" style="width:{{ " {:.0f}".format((collected_fees /
+                        total_fee_amount) * 100) }}%"></div>
+                </div>
+            </div>
+            {% endif %}
+            <div style="margin-top:1.25rem;">
+                <a href="{{ url_for('fees') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-eye"></i> View All Fees
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent SMS -->
+    <div class="summary-card animate-in">
+        <div class="summary-card-header">
+            <div class="summary-card-title">
+                <div class="summary-card-icon" style="background:var(--gradient-danger)"><i
+                        class="fas fa-comment-sms"></i></div>
+                Recent SMS Activity
+            </div>
+            <a href="{{ url_for('sms_management') }}" class="btn btn-sm btn-ghost">View All →</a>
+        </div>
+        <div class="summary-card-body" style="padding:0 1.5rem;">
+            {% if recent_sms %}
+            <ul class="sms-log-list">
+                {% for sms in recent_sms[:5] %}
+                <li class="sms-log-item">
+                    <div class="sms-log-icon"><i class="fas fa-paper-plane"></i></div>
+                    <div class="sms-log-info">
+                        <div class="sms-log-to">{{ sms.get('recipient', 'Unknown') }}</div>
+                        <div class="sms-log-msg">{{ sms.get('message', '')[:50] }}...</div>
+                    </div>
+                    <div class="sms-log-time">
+                        {{ sms.get('sent_at', '')[:10] }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state" style="padding:2rem 1rem;">
+                <div class="empty-state-icon" style="width:48px;height:48px;font-size:1.25rem;">
+                    <i class="fas fa-comment-slash"></i>
+                </div>
+                <p style="font-size:.875rem;margin:0;color:var(--neutral-500)">No SMS sent yet</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Dashboard Date Display
+    const now = new Date();
+    const dayEl = document.getElementById('dash-day');
+    const monthEl = document.getElementById('dash-month');
+    if (dayEl) dayEl.textContent = now.getDate();
+    if (monthEl) monthEl.textContent = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+</script>
+{% endblock %}

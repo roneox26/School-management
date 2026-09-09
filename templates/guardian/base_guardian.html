@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{% block title %}অভিভাবক পোর্টাল{% endblock %} — SchoolMS</title>
+  <meta name="description" content="School Management System — Guardian Portal">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/guardian-portal.css', v='20260908') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="guardian-portal">
+
+  <aside class="gp-sidebar" id="gpSidebar">
+    <a href="{{ url_for('guardian_dashboard') }}" class="gp-sidebar-brand">
+      <div class="gp-sidebar-brand-icon"><i class="fas fa-graduation-cap"></i></div>
+      <div>
+        <div class="gp-brand-name">SchoolMS</div>
+        <div class="gp-brand-sub">অভিভাবক পোর্টাল</div>
+      </div>
+    </a>
+    <nav class="gp-sidebar-nav">
+      <div class="gp-nav-section">মূল মেনু</div>
+      <a href="{{ url_for('guardian_dashboard') }}" class="gp-sidebar-link {% if request.endpoint == 'guardian_dashboard' %}active{% endif %}"><i class="fas fa-chart-pie"></i><span>ড্যাশবোর্ড</span></a>
+      <a href="{{ url_for('guardian_class_tracker') }}" class="gp-sidebar-link {% if request.endpoint == 'guardian_class_tracker' %}active{% endif %}"><i class="fas fa-broadcast-tower"></i><span>ক্লাস ট্র্যাকার</span></a>
+      <div class="gp-nav-section">একাডেমিক</div>
+      <a href="{{ url_for('guardian_attendance') }}" class="gp-sidebar-link {% if request.endpoint == 'guardian_attendance' %}active{% endif %}"><i class="fas fa-calendar-check"></i><span>উপস্থিতি</span></a>
+      <a href="{{ url_for('guardian_academic') }}" class="gp-sidebar-link {% if request.endpoint == 'guardian_academic' %}active{% endif %}"><i class="fas fa-book-open"></i><span>পড়াশোনা</span></a>
+      <a href="{{ url_for('guardian_fees') }}" class="gp-sidebar-link {% if request.endpoint == 'guardian_fees' %}active{% endif %}"><i class="fas fa-receipt"></i><span>ফি ও পেমেন্ট</span></a>
+      <div class="gp-nav-section">যোগাযোগ</div>
+      <a href="{{ url_for('guardian_messages') }}" class="gp-sidebar-link {% if request.endpoint == 'guardian_messages' %}active{% endif %}"><i class="fas fa-comment-dots"></i><span>শিক্ষক বার্তা</span></a>
+      <a href="{{ url_for('guardian_leave') }}" class="gp-sidebar-link {% if request.endpoint == 'guardian_leave' %}active{% endif %}"><i class="fas fa-clipboard-list"></i><span>ছুটির আবেদন</span></a>
+      <a href="{{ url_for('logout') }}" class="gp-sidebar-link"><i class="fas fa-sign-out-alt"></i><span>লগআউট</span></a>
+    </nav>
+    <div class="gp-sidebar-footer">
+      <div class="gp-sidebar-user">
+        <div class="gp-user-avatar">{{ current_user.username[0].upper() if current_user.is_authenticated else 'G' }}</div>
+        <div><div class="gp-user-name">{{ current_user.username }}</div><div class="gp-user-role">অভিভাবক</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========== TOP HEADER ========== -->
+  <div class="gp-main">
+  <header class="gp-topbar">
+    <div class="gp-topbar-inner">
+      <button class="gp-menu-toggle" id="gpMenuToggle" aria-label="মেনু"><i class="fas fa-bars"></i></button>
+      <h1>{% block page_title %}ড্যাশবোর্ড{% endblock %}</h1>
+      <div class="gp-topbar-brand">
+        <div class="gp-brand-icon"><i class="fas fa-graduation-cap"></i></div>
+        <div>
+          <div class="gp-brand-name">SchoolMS</div>
+          <div class="gp-brand-sub">অভিভাবক পোর্টাল</div>
+        </div>
+      </div>
+      <div class="gp-topbar-actions">
+        <a href="{{ url_for('guardian_messages') }}" class="gp-topbar-btn" title="বার্তা">
+          <i class="fas fa-comment-dots"></i>
+        </a>
+        <a href="{{ url_for('logout') }}" class="gp-topbar-btn" title="লগআউট"
+           onclick="return confirm('লগআউট করতে চান?')">
+          <i class="fas fa-sign-out-alt"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div style="max-width:500px;margin:.75rem auto;padding:0 1rem;">
+    {% for category, message in messages %}
+    <div class="gp-alert gp-alert-{{ 'danger' if category in ['error','danger'] else ('warning' if category == 'warning' else 'success') }}">
+      <i class="fas fa-{{ 'exclamation-circle' if category in ['error','danger'] else ('exclamation-triangle' if category == 'warning' else 'check-circle') }}"></i>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- ========== PAGE CONTENT ========== -->
+  <main class="gp-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ========== BOTTOM NAV ========== -->
+  <nav class="gp-bottom-nav">
+    <a href="{{ url_for('guardian_dashboard') }}" class="gp-nav-item {% if request.endpoint == 'guardian_dashboard' %}active{% endif %}">
+      <i class="fas fa-home"></i>
+      <span>হোম</span>
+    </a>
+    <a href="{{ url_for('guardian_class_tracker') }}" class="gp-nav-item {% if request.endpoint == 'guardian_class_tracker' %}active{% endif %}">
+      <i class="fas fa-broadcast-tower"></i>
+      <span>ক্লাস</span>
+    </a>
+    <a href="{{ url_for('guardian_attendance') }}" class="gp-nav-item {% if request.endpoint == 'guardian_attendance' %}active{% endif %}">
+      <i class="fas fa-calendar-check"></i>
+      <span>হাজিরা</span>
+    </a>
+    <a href="{{ url_for('guardian_fees') }}" class="gp-nav-item {% if request.endpoint == 'guardian_fees' %}active{% endif %}">
+      <i class="fas fa-receipt"></i>
+      <span>ফি</span>
+    </a>
+    <a href="{{ url_for('guardian_academic') }}" class="gp-nav-item {% if request.endpoint in ['guardian_academic'] %}active{% endif %}">
+      <i class="fas fa-book-open"></i>
+      <span>পড়াশোনা</span>
+    </a>
+  </nav>
+
+  </div>
+
+  <script>
+    const gpSidebar = document.getElementById('gpSidebar');
+    const gpMenuToggle = document.getElementById('gpMenuToggle');
+    gpMenuToggle?.addEventListener('click', () => gpSidebar?.classList.toggle('open'));
+    // Auto-dismiss alerts
+    document.querySelectorAll('.gp-alert').forEach(el => {
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity .4s';
+        setTimeout(() => el.remove(), 400);
+      }, 5000);
+    });
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

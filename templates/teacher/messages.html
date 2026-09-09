@@ -1,0 +1,84 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}বার্তা{% endblock %}
+{% block page_title %}অভিভাবকদের সাথে বার্তা{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:1.25rem;">
+
+  <!-- Compose -->
+  <div class="tp-card tp-animate" style="height:fit-content;">
+    <div class="tp-card-header">
+      <div class="tp-card-title"><i class="fas fa-pen-to-square" style="color:var(--tp-primary)"></i> নতুন বার্তা</div>
+    </div>
+    <div class="tp-card-body">
+      <form method="POST" action="{{ url_for('teacher_send_message') }}">
+        <div style="margin-bottom:.875rem;">
+          <label class="tp-label">প্রাপক (অভিভাবক)</label>
+          <select name="to_id" required class="tp-input">
+            <option value="">অভিভাবক নির্বাচন করুন</option>
+            {% for gu in guardian_users %}
+            <option value="guardian_{{ gu.id }}">{{ gu.username }}{% if gu.student_name %} ({{ gu.student_name }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label class="tp-label">বার্তা</label>
+          <textarea name="body" required class="tp-input" rows="5" placeholder="বার্তা লিখুন..."></textarea>
+        </div>
+        <button type="submit" class="tp-btn tp-btn-primary" style="width:100%;">
+          <i class="fas fa-paper-plane"></i> পাঠান
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="tp-card tp-animate">
+    <div class="tp-card-header">
+      <div class="tp-card-title"><i class="fas fa-inbox" style="color:var(--tp-primary)"></i> বার্তা তালিকা</div>
+      <span style="font-size:.75rem;color:var(--tp-muted);">{{ messages|length }} টি</span>
+    </div>
+    <div class="tp-card-body" style="max-height:70vh;overflow-y:auto;">
+      {% if messages %}
+      <div style="display:flex;flex-direction:column;gap:.75rem;">
+        {% for msg in messages %}
+        <div style="border-radius:12px;padding:.875rem 1rem;
+          {% if msg.from_role == 'teacher' %}
+          background:linear-gradient(135deg,rgba(13,148,136,.06),rgba(16,185,129,.04));
+          border:1.5px solid rgba(13,148,136,.2);
+          {% else %}
+          background:var(--tp-bg);
+          border:1.5px solid var(--tp-border);
+          {% endif %}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem;">
+            <span style="font-size:.78rem;font-weight:700;color:{{ 'var(--tp-primary)' if msg.from_role == 'teacher' else '#6366f1' }};">
+              {% if msg.from_role == 'teacher' %}
+              <i class="fas fa-chalkboard-teacher"></i> আপনি
+              {% else %}
+              <i class="fas fa-user-circle"></i> {{ msg.from_name or 'অভিভাবক' }}
+              {% if msg.student_name %}<span style="font-weight:400;color:var(--tp-muted);"> ({{ msg.student_name }})</span>{% endif %}
+              {% endif %}
+            </span>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              {% if not msg.read and msg.to_id == current_user.id %}
+              <span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:.15rem .5rem;font-size:.65rem;font-weight:700;">নতুন</span>
+              {% endif %}
+              <span style="font-size:.7rem;color:var(--tp-muted);">{{ msg.created_at[:16].replace('T',' ') }}</span>
+            </div>
+          </div>
+          <div style="font-size:.875rem;color:var(--tp-text);line-height:1.6;">{{ msg.body }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:2.5rem;color:var(--tp-muted);">
+        <i class="fas fa-comments" style="font-size:3rem;opacity:.3;display:block;margin-bottom:1rem;"></i>
+        <div style="font-weight:600;">কোনো বার্তা নেই</div>
+        <div style="font-size:.8rem;margin-top:.5rem;">অভিভাবকদের বার্তা পাঠান</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

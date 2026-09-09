@@ -1,0 +1,94 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}আমার ক্লাস{% endblock %}
+{% block page_title %}আমার ক্লাস ও শিক্ষার্থী{% endblock %}
+
+{% block content %}
+<div class="tp-page-header">
+  <h2>আমার ক্লাস</h2>
+  <p>আপনার অ্যাসাইন করা সকল ক্লাসের তালিকা</p>
+</div>
+
+{% if my_classes %}
+<div class="tp-stat-grid" style="margin-bottom:1.5rem;">
+  <div class="tp-stat-card tp-animate">
+    <div class="tp-stat-icon teal"><i class="fas fa-layer-group"></i></div>
+    <div>
+      <div class="tp-stat-label">মোট ক্লাস</div>
+      <div class="tp-stat-value">{{ my_classes|length }}</div>
+    </div>
+  </div>
+  <div class="tp-stat-card tp-animate">
+    <div class="tp-stat-icon green"><i class="fas fa-user-graduate"></i></div>
+    <div>
+      <div class="tp-stat-label">মোট শিক্ষার্থী</div>
+      <div class="tp-stat-value">{{ my_classes|sum(attribute='student_count') }}</div>
+    </div>
+  </div>
+</div>
+
+{% for cls in my_classes %}
+<div class="tp-card tp-animate" style="margin-bottom:1.25rem;">
+  <div class="tp-card-header">
+    <div class="tp-card-title">
+      <span style="background:var(--tp-primary-light);color:var(--tp-primary);
+                   padding:.2rem .7rem;border-radius:6px;font-size:.85rem;margin-right:.5rem;">
+        {{ cls.name }} {{ cls.section }}
+      </span>
+      <span style="font-weight:500;color:var(--tp-muted);font-size:.875rem;">
+        {{ cls.student_count }} জন শিক্ষার্থী
+      </span>
+    </div>
+    <div style="display:flex;gap:.5rem;">
+      <a href="{{ url_for('teacher_attendance_view', class_id=cls.id) }}" class="tp-btn tp-btn-sm tp-btn-primary">
+        <i class="fas fa-calendar-check"></i> হাজিরা
+      </a>
+    </div>
+  </div>
+  <div class="tp-card-body" style="padding:0;">
+    {% if cls.students %}
+    <table class="tp-att-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>নাম</th>
+          <th>রোল নম্বর</th>
+          <th>ফোন</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in cls.students[:10] %}
+        <tr>
+          <td style="color:var(--tp-muted);font-size:.8rem;">{{ loop.index }}</td>
+          <td style="font-weight:600;">{{ student.name }}</td>
+          <td><span class="tp-badge tp-badge-info">{{ student.roll_number }}</span></td>
+          <td style="color:var(--tp-muted);font-size:.83rem;">{{ student.phone or '—' }}</td>
+        </tr>
+        {% endfor %}
+        {% if cls.student_count > 10 %}
+        <tr>
+          <td colspan="4" style="text-align:center;padding:.75rem;color:var(--tp-muted);font-size:.83rem;">
+            আরও {{ cls.student_count - 10 }} জন শিক্ষার্থী
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center;padding:2rem;color:var(--tp-muted);font-size:.875rem;">
+      কোনো শিক্ষার্থী নেই
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="tp-card">
+  <div class="tp-card-body" style="text-align:center;padding:3rem;color:var(--tp-muted);">
+    <i class="fas fa-layer-group" style="font-size:3rem;opacity:.3;display:block;margin-bottom:1rem;"></i>
+    <div style="font-weight:600;font-size:1rem;margin-bottom:.5rem;">কোনো ক্লাস অ্যাসাইন করা হয়নি</div>
+    <div style="font-size:.875rem;">অ্যাডমিন আপনাকে ক্লাসে অ্যাসাইন করলে এখানে দেখা যাবে।</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

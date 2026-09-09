@@ -1,0 +1,175 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}ড্যাশবোর্ড{% endblock %}
+{% block page_title %}ড্যাশবোর্ড{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div style="background:linear-gradient(135deg,#0d9488,#10b981);border-radius:16px;padding:1.5rem 1.75rem;color:#fff;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+  <div>
+    <div style="font-size:.85rem;opacity:.8;margin-bottom:.25rem;">আস্সালামু আলাইকুম 👋</div>
+    <div style="font-size:1.5rem;font-weight:800;">{{ teacher_name }}</div>
+    <div style="font-size:.85rem;opacity:.8;margin-top:.25rem;">
+      <i class="fas fa-calendar-day"></i> {{ today_weekday }}, {{ today }}
+    </div>
+  </div>
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+    <a href="{{ url_for('teacher_attendance_view') }}" class="tp-btn tp-btn-outline"
+       style="border-color:rgba(255,255,255,.5);color:#fff;background:rgba(255,255,255,.15);">
+      <i class="fas fa-calendar-check"></i> হাজিরা নিন
+    </a>
+    <a href="{{ url_for('teacher_homework') }}" class="tp-btn tp-btn-outline"
+       style="border-color:rgba(255,255,255,.5);color:#fff;background:rgba(255,255,255,.15);">
+      <i class="fas fa-plus"></i> হোমওয়ার্ক
+    </a>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="tp-stat-grid">
+  <div class="tp-stat-card tp-animate">
+    <div class="tp-stat-icon teal"><i class="fas fa-users"></i></div>
+    <div>
+      <div class="tp-stat-label">আমার ক্লাস</div>
+      <div class="tp-stat-value">{{ my_classes|length }}</div>
+    </div>
+  </div>
+  <div class="tp-stat-card tp-animate">
+    <div class="tp-stat-icon amber"><i class="fas fa-calendar"></i></div>
+    <div>
+      <div class="tp-stat-label">আজকের ক্লাস</div>
+      <div class="tp-stat-value">{{ today_schedules|length }}</div>
+    </div>
+  </div>
+  <div class="tp-stat-card tp-animate">
+    <div class="tp-stat-icon indigo"><i class="fas fa-book-open"></i></div>
+    <div>
+      <div class="tp-stat-label">হোমওয়ার্ক</div>
+      <div class="tp-stat-value">{{ pending_hw_count }}</div>
+    </div>
+  </div>
+  <div class="tp-stat-card tp-animate">
+    <div class="tp-stat-icon red"><i class="fas fa-comment-dots"></i></div>
+    <div>
+      <div class="tp-stat-label">অপঠিত বার্তা</div>
+      <div class="tp-stat-value">{{ unread_msg_count }}</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;flex-wrap:wrap;">
+
+  <!-- Today's Classes -->
+  <div class="tp-card tp-animate" style="grid-column: 1 / -1;">
+    <div class="tp-card-header">
+      <div class="tp-card-title">
+        <i class="fas fa-clock" style="color:var(--tp-primary)"></i>
+        আজকের ক্লাস টাইমলাইন
+      </div>
+      <span style="font-size:.72rem;color:var(--tp-muted);font-weight:500;">{{ today_weekday }}</span>
+    </div>
+    <div class="tp-card-body">
+      {% if today_schedules %}
+      <ul class="tp-timeline">
+        {% for sch in today_schedules %}
+        <li class="tp-timeline-item">
+          <div class="tp-tl-icon {{ sch.session_status }}">
+            {% if sch.session_status == 'completed' %}<i class="fas fa-check"></i>
+            {% elif sch.session_status == 'ongoing' %}<i class="fas fa-running"></i>
+            {% elif sch.session_status == 'cancelled' %}<i class="fas fa-times"></i>
+            {% else %}<i class="fas fa-clock"></i>{% endif %}
+          </div>
+          <div class="tp-tl-body">
+            <div class="tp-tl-time">{{ sch.start_time }} — {{ sch.end_time }}</div>
+            <div class="tp-tl-subject">{{ sch.subject }}</div>
+            <div class="tp-tl-class">{{ sch.class_name }}</div>
+          </div>
+          <span class="tp-tl-status {{ sch.session_status }}">
+            {% if sch.session_status == 'completed' %}✓ সম্পন্ন
+            {% elif sch.session_status == 'ongoing' %}▶ চলছে
+            {% elif sch.session_status == 'cancelled' %}✗ হয়নি
+            {% else %}⏳ আসছে{% endif %}
+          </span>
+          <!-- Session Control Buttons -->
+          <div style="display:flex;flex-direction:column;gap:.3rem;align-items:flex-end;">
+            {% if sch.session_status == 'upcoming' %}
+            <form method="POST" action="{{ url_for('update_session_status') }}">
+              <input type="hidden" name="schedule_id" value="{{ sch.id }}">
+              <input type="hidden" name="class_id" value="{{ sch.class_id }}">
+              <input type="hidden" name="status" value="ongoing">
+              <button type="submit" class="tp-session-btn start">▶ শুরু</button>
+            </form>
+            {% elif sch.session_status == 'ongoing' %}
+            <form method="POST" action="{{ url_for('update_session_status') }}" style="display:inline">
+              <input type="hidden" name="schedule_id" value="{{ sch.id }}">
+              <input type="hidden" name="class_id" value="{{ sch.class_id }}">
+              <input type="hidden" name="status" value="completed">
+              <button type="submit" class="tp-session-btn end">✓ শেষ</button>
+            </form>
+            <form method="POST" action="{{ url_for('update_session_status') }}" style="display:inline">
+              <input type="hidden" name="schedule_id" value="{{ sch.id }}">
+              <input type="hidden" name="class_id" value="{{ sch.class_id }}">
+              <input type="hidden" name="status" value="cancelled">
+              <button type="submit" class="tp-session-btn cancel">✗ বাতিল</button>
+            </form>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div style="text-align:center;padding:2rem;color:var(--tp-muted);">
+        <i class="fas fa-calendar-times" style="font-size:2rem;margin-bottom:.75rem;display:block;opacity:.4"></i>
+        আজকে কোনো ক্লাস নেই
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent Notices -->
+  <div class="tp-card tp-animate">
+    <div class="tp-card-header">
+      <div class="tp-card-title"><i class="fas fa-bullhorn" style="color:var(--tp-accent2)"></i> নোটিশ</div>
+      <a href="{{ url_for('teacher_notices') }}" style="font-size:.78rem;color:var(--tp-primary);font-weight:600;">সব দেখুন</a>
+    </div>
+    <div class="tp-card-body">
+      {% if recent_notices %}
+      <div class="tp-notice-list">
+        {% for notice in recent_notices[:4] %}
+        <div class="tp-notice-item">
+          <div class="tp-notice-title">{{ notice.title }}</div>
+          <div class="tp-notice-meta">
+            <span><i class="fas fa-user"></i> {{ notice.created_by_name or 'Admin' }}</span>
+            <span><i class="fas fa-clock"></i> {{ notice.created_at[:10] }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:1.5rem;color:var(--tp-muted);font-size:.875rem;">কোনো নোটিশ নেই</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick Links -->
+  <div class="tp-card tp-animate">
+    <div class="tp-card-header">
+      <div class="tp-card-title"><i class="fas fa-bolt" style="color:#f59e0b"></i> দ্রুত অ্যাকসেস</div>
+    </div>
+    <div class="tp-card-body" style="display:flex;flex-direction:column;gap:.625rem;">
+      <a href="{{ url_for('teacher_attendance_view') }}" class="tp-btn tp-btn-primary">
+        <i class="fas fa-calendar-check"></i> হাজিরা নিন
+      </a>
+      <a href="{{ url_for('teacher_homework') }}" class="tp-btn tp-btn-outline">
+        <i class="fas fa-book-open"></i> হোমওয়ার্ক যোগ করুন
+      </a>
+      <a href="{{ url_for('teacher_results') }}" class="tp-btn tp-btn-outline">
+        <i class="fas fa-clipboard-list"></i> রেজাল্ট এন্ট্রি
+      </a>
+      <a href="{{ url_for('teacher_notices') }}" class="tp-btn tp-btn-outline">
+        <i class="fas fa-bullhorn"></i> নোটিশ পাঠান
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block page_title %}Students{% endblock %}
+
+{% block breadcrumb %} / <span>Students</span>{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--gradient-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: .875rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .student-name-cell {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .student-info-main {
+        font-size: .875rem;
+        font-weight: 600;
+        color: var(--neutral-900);
+    }
+
+    .student-info-sub {
+        font-size: .75rem;
+        color: var(--neutral-500);
+    }
+
+    .filter-bar {
+        background: white;
+        border: 1px solid var(--neutral-200);
+        border-radius: var(--radius-xl);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: .875rem;
+        flex-wrap: wrap;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .action-btns {
+        display: flex;
+        gap: .375rem;
+    }
+
+    .roll-badge {
+        display: inline-flex;
+        align-items: center;
+        background: var(--neutral-100);
+        border: 1px solid var(--neutral-200);
+        border-radius: var(--radius-md);
+        padding: 2px 8px;
+        font-size: .75rem;
+        font-weight: 700;
+        color: var(--neutral-700);
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header animate-in">
+    <div class="page-header-left">
+        <h1 class="page-title">Students Management</h1>
+        <p class="page-subtitle">Manage enrolled students, view profiles, and track records</p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{{ url_for('add_student') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Add Student
+        </a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem;" class="animate-in">
+    <div class="card" style="text-align:center;padding:1.25rem;border-left:3px solid var(--brand-primary);">
+        <div style="font-size:1.75rem;font-weight:800;color:var(--brand-primary);">{{ students|length }}</div>
+        <div style="font-size:.8rem;color:var(--neutral-500);font-weight:500;">Showing Results</div>
+    </div>
+    <div class="card" style="text-align:center;padding:1.25rem;border-left:3px solid var(--color-success);">
+        <div style="font-size:1.75rem;font-weight:800;color:var(--color-success);">{{
+            students|selectattr('is_active')|list|length }}</div>
+        <div style="font-size:.8rem;color:var(--neutral-500);font-weight:500;">Active Students</div>
+    </div>
+    <div class="card" style="text-align:center;padding:1.25rem;border-left:3px solid var(--color-danger);">
+        <div style="font-size:1.75rem;font-weight:800;color:var(--color-danger);">{{
+            students|rejectattr('is_active')|list|length }}</div>
+        <div style="font-size:.8rem;color:var(--neutral-500);font-weight:500;">Inactive Students</div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" class="filter-bar animate-in">
+    <div class="search-box" style="flex:1;min-width:200px;">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="form-control" name="search" placeholder="Search by name or roll number..."
+            value="{{ request.args.get('search', '') }}" style="width:100%;">
+    </div>
+
+    <select name="class_filter" class="form-control" style="width:auto;min-width:160px;">
+        <option value="">All Classes</option>
+        {% for class in classes %}
+        <option value="{{ class.id }}" {% if request.args.get('class_filter')==class.id|string %}selected{% endif %}>
+            {{ class.name }} – {{ class.section }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <select name="status_filter" class="form-control" style="width:auto;min-width:140px;">
+        <option value="all" {% if request.args.get('status_filter', 'all' )=='all' %}selected{% endif %}>All Status
+        </option>
+        <option value="active" {% if request.args.get('status_filter')=='active' %}selected{% endif %}>Active Only
+        </option>
+        <option value="inactive" {% if request.args.get('status_filter')=='inactive' %}selected{% endif %}>Inactive Only
+        </option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-filter"></i> Filter
+    </button>
+    <a href="{{ url_for('students') }}" class="btn btn-ghost">
+        <i class="fas fa-times"></i> Clear
+    </a>
+</form>
+
+<!-- Students Table -->
+<div class="card animate-in" style="overflow:hidden;">
+    {% if students %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Roll No.</th>
+                    <th>Class</th>
+                    <th>Contact</th>
+                    <th>Guardian</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>
+                        <div class="student-name-cell">
+                            <div class="student-avatar">
+                                {{ student.name[0].upper() if student.name else 'S' }}
+                            </div>
+                            <div>
+                                <div class="student-info-main">{{ student.name }}</div>
+                                <div class="student-info-sub">
+                                    {% if student.date_of_birth %}
+                                    DOB: {{ student.date_of_birth if student.date_of_birth is string else
+                                    student.date_of_birth.strftime('%d %b %Y') }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="roll-badge">{{ student.roll_number }}</span>
+                    </td>
+                    <td>
+                        <span style="font-size:.875rem;color:var(--neutral-700);">{{ student.get('class_name', '—')
+                            }}</span>
+                    </td>
+                    <td>
+                        <div style="font-size:.875rem;color:var(--neutral-700);">{{ student.phone }}</div>
+                        {% if student.email %}
+                        <div style="font-size:.75rem;color:var(--neutral-500);">{{ student.email }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-size:.875rem;color:var(--neutral-700);">{{ student.guardian_name }}</div>
+                        <div style="font-size:.75rem;color:var(--neutral-500);">{{ student.guardian_phone }}</div>
+                    </td>
+                    <td>
+                        <span class="badge {% if student.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                            <i class="fas fa-{% if student.is_active %}circle{% else %}times-circle{% endif %}"
+                                style="font-size:.5rem;"></i>
+                            {{ 'Active' if student.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{{ url_for('view_student', student_id=student.id) }}" class="btn btn-sm btn-ghost"
+                                title="View Details" data-bs-toggle="tooltip">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('edit_student', student_id=student.id) }}" class="btn btn-sm btn-ghost"
+                                title="Edit Student" data-bs-toggle="tooltip">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                            <button class="btn btn-sm btn-ghost"
+                                onclick="sendSMS('{{ student.guardian_phone }}', '{{ student.name }}')" title="Send SMS"
+                                data-bs-toggle="tooltip" style="color:var(--brand-secondary);">
+                                <i class="fas fa-comment-sms"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('delete_student', student_id=student.id) }}"
+                                style="display:inline;" onsubmit="return confirm('Deactivate {{ student.name }}?')">
+                                <button type="submit" class="btn btn-sm btn-ghost" title="Deactivate"
+                                    data-bs-toggle="tooltip" style="color:var(--color-danger);">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div
+        style="padding:.875rem 1.5rem;border-top:1px solid var(--neutral-100);background:var(--neutral-50);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:.8125rem;color:var(--neutral-500);">
+            Showing <strong>{{ students|length }}</strong> student(s)
+        </span>
+        <a href="{{ url_for('add_student') }}" class="btn btn-sm btn-primary">
+            <i class="fas fa-plus"></i> Add Student
+        </a>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <h3>No Students Found</h3>
+        <p>No students match your criteria. Try adjusting filters or add a new student.</p>
+        <a href="{{ url_for('add_student') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Add First Student
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function sendSMS(phone, name) {
+        if (confirm(`Send SMS to ${name} (${phone})?`)) {
+            showToast('SMS', `Quick SMS to ${name} — feature coming soon!`, 'info');
+        }
+    }
+</script>
+{% endblock %}
