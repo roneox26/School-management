@@ -1952,7 +1952,11 @@ def clear_all_data():
 
         for collection in collections:
             with get_db_connection() as conn:
-                conn.execute("DELETE FROM app_data WHERE collection = ?", (collection,))
+                cursor = conn.cursor()
+                if USE_POSTGRES:
+                    cursor.execute("DELETE FROM app_data WHERE collection = %s", (collection,))
+                else:
+                    cursor.execute("DELETE FROM app_data WHERE collection = ?", (collection,))
                 conn.commit()
             clear_cache(collection)
 
@@ -3304,7 +3308,12 @@ def init_app():
     
     # Check if already initialized (original logic)
     with get_db_connection() as conn:
-        row = conn.execute("SELECT id FROM app_data WHERE collection = 'metadata' AND id = 'initialized'").fetchone()
+        cursor = conn.cursor()
+        if USE_POSTGRES:
+            cursor.execute("SELECT id FROM app_data WHERE collection = %s AND id = %s", ('metadata', 'initialized'))
+        else:
+            cursor.execute("SELECT id FROM app_data WHERE collection = ? AND id = ?", ('metadata', 'initialized'))
+        row = cursor.fetchone()
     
     if not row:
         print("[INIT_APP] First time initialization - creating default data")
@@ -3390,10 +3399,17 @@ def init_app():
 
             # Mark initialization as complete
             with get_db_connection() as conn:
-                conn.execute(
-                    "INSERT OR REPLACE INTO app_data (collection, id, data) VALUES (?, ?, ?)",
-                    ('metadata', 'initialized', json.dumps(True))
-                )
+                cursor = conn.cursor()
+                if USE_POSTGRES:
+                    cursor.execute(
+                        "INSERT INTO app_data (collection, id, data) VALUES (%s, %s, %s) ON CONFLICT (collection, id) DO UPDATE SET data = EXCLUDED.data",
+                        ('metadata', 'initialized', json.dumps(True))
+                    )
+                else:
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO app_data (collection, id, data) VALUES (?, ?, ?)",
+                        ('metadata', 'initialized', json.dumps(True))
+                    )
                 conn.commit()
 
 @app.route('/smart_search')
