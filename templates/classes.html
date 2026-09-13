@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block page_title %}Classes{% endblock %}
+{% block breadcrumb %} / <span>Classes</span>{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <div class="page-header-left">
+        <h1 class="page-title">Class Management</h1>
+        <p class="page-subtitle">Create sections, assign teachers, and manage class rosters</p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{{ url_for('add_class') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Class
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem;" class="animate-in">
+    <div class="card" style="text-align:center;padding:1.25rem;border-left:3px solid var(--brand-primary);">
+        <div style="font-size:1.75rem;font-weight:800;color:var(--brand-primary);">{{ classes|length }}</div>
+        <div style="font-size:.8rem;color:var(--neutral-500);">Total Classes</div>
+    </div>
+    <div class="card" style="text-align:center;padding:1.25rem;border-left:3px solid var(--color-success);">
+        <div style="font-size:1.75rem;font-weight:800;color:var(--color-success);">
+            {{ classes|sum(attribute='student_count') if classes else 0 }}
+        </div>
+        <div style="font-size:.8rem;color:var(--neutral-500);">Total Students</div>
+    </div>
+    <div class="card" style="text-align:center;padding:1.25rem;border-left:3px solid var(--color-warning);">
+        <div style="font-size:1.75rem;font-weight:800;color:var(--color-warning);">
+            {{ classes|selectattr('teacher_id')|list|length if classes else 0 }}
+        </div>
+        <div style="font-size:.8rem;color:var(--neutral-500);">Classes with Teachers</div>
+    </div>
+</div>
+
+<!-- Classes Grid -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;" class="animate-in">
+    {% if classes %}
+    {% for class in classes %}
+    <div class="card" style="transition:all var(--ease-base);border-top:3px solid var(--brand-primary);">
+        <div class="card-body">
+            <!-- Class Header -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <div
+                        style="width:48px;height:48px;background:var(--gradient-primary);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:1rem;flex-shrink:0;">
+                        {{ class.name[0] if class.name else 'C' }}
+                    </div>
+                    <div>
+                        <div style="font-size:1rem;font-weight:700;color:var(--neutral-900);">{{ class.name }}</div>
+                        <div style="font-size:.75rem;color:var(--neutral-500);">Section: {{ class.section }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <hr style="border:none;border-top:1px solid var(--neutral-100);margin:.875rem 0;">
+
+            <!-- Class Info -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem;">
+                <div>
+                    <div
+                        style="font-size:.7rem;color:var(--neutral-400);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:3px;">
+                        Students</div>
+                    <div style="font-size:1.25rem;font-weight:800;color:var(--brand-primary);">{{ class.student_count }}
+                    </div>
+                </div>
+                <div>
+                    <div
+                        style="font-size:.7rem;color:var(--neutral-400);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:3px;">
+                        Capacity</div>
+                    <div style="font-size:1.25rem;font-weight:800;color:var(--neutral-700);">{{ class.capacity or 40 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Capacity Bar -->
+            {% set capacity = class.capacity or 40 %}
+            {% set pct = ((class.student_count / capacity) * 100)|int if capacity > 0 else 0 %}
+            <div style="margin-bottom:1rem;">
+                <div
+                    style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--neutral-500);margin-bottom:4px;">
+                    <span>Occupancy</span>
+                    <span>{{ pct }}%</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar {% if pct >= 90 %}danger{% elif pct >= 70 %}warning{% else %}success{% endif %}"
+                        style="width:{{ pct }}%"></div>
+                </div>
+            </div>
+
+            <!-- Teacher -->
+            <div style="display:flex;align-items:center;gap:.5rem;font-size:.8125rem;margin-bottom:1rem;">
+                <i class="fas fa-chalkboard-teacher" style="color:var(--neutral-400);width:14px;"></i>
+                <span style="color:var(--neutral-600);">
+                    {{ class.teacher_name if class.get('teacher_name') else 'No teacher assigned' }}
+                </span>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:.5rem;">
+                <a href="{{ url_for('transfer_students_page', class_id=class.id) }}" class="btn btn-sm btn-ghost"
+                    style="flex:1;justify-content:center;">
+                    <i class="fas fa-exchange-alt"></i> Transfer
+                </a>
+                <form method="POST" action="{{ url_for('delete_class', class_id=class.id) }}" style="flex-shrink:0;"
+                    onsubmit="return confirm('Delete class {{ class.name }} - {{ class.section }}?')">
+                    <button type="submit" class="btn btn-sm btn-ghost" style="color:var(--color-danger);">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card" style="grid-column:1/-1;">
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-layer-group"></i></div>
+            <h3>No Classes Yet</h3>
+            <p>Create your first class to get started.</p>
+            <a href="{{ url_for('add_class') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add First Class
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

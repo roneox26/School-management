@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{% block page_title %}Student Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-calendar-check me-2"></i>Student Attendance</h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('attendance_report') }}" class="btn btn-outline-primary">
+            <i class="fas fa-chart-bar me-2"></i>Reports
+        </a>
+        <a href="{{ url_for('teacher_attendance') }}" class="btn btn-outline-info">
+            <i class="fas fa-user-check me-2"></i>Teacher Attendance
+        </a>
+    </div>
+</div>
+
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-control" name="date" value="{{ date }}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Class</label>
+                <select name="class_id" class="form-select">
+                    <option value="">All Classes</option>
+                    {% for class in classes %}
+                        <option value="{{ class.id }}" 
+                                {% if request.args.get('class_id') == class.id|string %}selected{% endif %}>
+                            {{ class.name }} - {{ class.section }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status Filter</label>
+                <select name="status_filter" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="present" {% if request.args.get('status_filter') == 'present' %}selected{% endif %}>Present Only</option>
+                    <option value="absent" {% if request.args.get('status_filter') == 'absent' %}selected{% endif %}>Absent Only</option>
+                    <option value="not_marked" {% if request.args.get('status_filter') == 'not_marked' %}selected{% endif %}>Not Marked</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-2"></i>Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if students %}
+<form method="POST" action="{{ url_for('mark_attendance') }}">
+    <input type="hidden" name="date" value="{{ date }}">
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6>Total Students</h6>
+                    <h4>{{ students|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6>Present</h6>
+                    <h4 id="presentCount">{{ attendance_records.values()|list|select('equalto', 'Present')|list|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6>Absent</h6>
+                    <h4 id="absentCount">{{ attendance_records.values()|list|select('equalto', 'Absent')|list|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6>Late</h6>
+                    <h4 id="lateCount">{{ attendance_records.values()|list|select('equalto', 'Late')|list|length }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Mark Attendance - {{ date }}</h5>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-success btn-sm" onclick="markAll('Present')">
+                    <i class="fas fa-check-circle me-1"></i>All Present
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="markAll('Absent')">
+                    <i class="fas fa-times-circle me-1"></i>All Absent
+                </button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save me-2"></i>Save
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Roll</th>
+                            <th>Student Name</th>
+                            <th>Class</th>
+                            <th class="text-center">Present</th>
+                            <th class="text-center">Absent</th>
+                            <th class="text-center">Late</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                            <tr>
+                                <td><strong>{{ student.roll_number }}</strong></td>
+                                <td>
+                                    {{ student.name }}
+                                    {% if student.guardian_phone %}
+                                        <br><small class="text-muted">{{ student.guardian_phone }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ student.class_name }}</td>
+                                <td class="text-center">
+                                    <div class="form-check form-check-inline">
+                                        <input type="radio" class="form-check-input present-radio" 
+                                               name="student_{{ student.id }}" value="Present"
+                                               {% if attendance_records.get(student.id) == 'Present' %}checked{% endif %}
+                                               onchange="updateCounts()">
+                                        <label class="form-check-label text-success fw-bold">
+                                            <i class="fas fa-check-circle"></i>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-check-inline">
+                                        <input type="radio" class="form-check-input absent-radio" 
+                                               name="student_{{ student.id }}" value="Absent"
+                                               {% if attendance_records.get(student.id) == 'Absent' %}checked{% endif %}
+                                               onchange="updateCounts()">
+                                        <label class="form-check-label text-danger fw-bold">
+                                            <i class="fas fa-times-circle"></i>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-check-inline">
+                                        <input type="radio" class="form-check-input late-radio" 
+                                               name="student_{{ student.id }}" value="Late"
+                                               {% if attendance_records.get(student.id) == 'Late' %}checked{% endif %}
+                                               onchange="updateCounts()">
+                                        <label class="form-check-label text-warning fw-bold">
+                                            <i class="fas fa-clock"></i>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    {% set current_status = attendance_records.get(student.id) %}
+                                    {% if current_status == 'Present' %}
+                                        <span class="badge bg-success">Present</span>
+                                    {% elif current_status == 'Absent' %}
+                                        <span class="badge bg-danger">Absent</span>
+                                    {% elif current_status == 'Late' %}
+                                        <span class="badge bg-warning">Late</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not Marked</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between mt-3">
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearAll()">
+                        <i class="fas fa-eraser me-1"></i>Clear All
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-save me-2"></i>Save Attendance
+                    </button>
+                    <button type="submit" name="send_sms" value="true" class="btn btn-warning me-2">
+                        <i class="fas fa-sms me-2"></i>Save & Send SMS
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="sendWhatsAppAlerts()">
+                        <i class="fab fa-whatsapp"></i> Send WhatsApp Alerts
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+function markAll(status) {
+    const radios = document.querySelectorAll('input[name^="student_"][value="' + status + '"]');
+    radios.forEach(function(radio) {
+        radio.checked = true;
+    });
+    updateCounts();
+    updateStatusBadges();
+}
+
+function clearAll() {
+    if (confirm('সব attendance mark clear করবেন?')) {
+        const radios = document.querySelectorAll('input[name^="student_"]');
+        radios.forEach(function(radio) {
+            radio.checked = false;
+        });
+        updateCounts();
+        updateStatusBadges();
+    }
+}
+
+function updateCounts() {
+    const presentCount = document.querySelectorAll('input[name^="student_"][value="Present"]:checked').length;
+    const absentCount = document.querySelectorAll('input[name^="student_"][value="Absent"]:checked').length;
+    const lateCount = document.querySelectorAll('input[name^="student_"][value="Late"]:checked').length;
+
+    const presentElement = document.getElementById('presentCount');
+    const absentElement = document.getElementById('absentCount');
+    const lateElement = document.getElementById('lateCount');
+
+    if (presentElement) presentElement.textContent = presentCount;
+    if (absentElement) absentElement.textContent = absentCount;
+    if (lateElement) lateElement.textContent = lateCount;
+}
+
+function updateStatusBadges() {
+    // Update status badges in real-time
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(function(row) {
+        const studentRadios = row.querySelectorAll('input[type="radio"]');
+        const statusBadge = row.querySelector('td:last-child .badge');
+
+        if (statusBadge) {
+            let selectedStatus = null;
+            studentRadios.forEach(function(radio) {
+                if (radio.checked) {
+                    selectedStatus = radio.value;
+                }
+            });
+
+            if (selectedStatus === 'Present') {
+                statusBadge.className = 'badge bg-success';
+                statusBadge.textContent = 'Present';
+            } else if (selectedStatus === 'Absent') {
+                statusBadge.className = 'badge bg-danger';
+                statusBadge.textContent = 'Absent';
+            } else if (selectedStatus === 'Late') {
+                statusBadge.className = 'badge bg-warning';
+                statusBadge.textContent = 'Late';
+            } else {
+                statusBadge.className = 'badge bg-secondary';
+                statusBadge.textContent = 'Not Marked';
+            }
+        }
+    });
+}
+
+// Add event listeners to all radio buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial count update
+    updateCounts();
+
+    // Add change event listeners to all attendance radio buttons
+    const radioButtons = document.querySelectorAll('input[name^="student_"]');
+    radioButtons.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            updateCounts();
+            updateStatusBadges();
+        });
+    });
+
+    // Update status badges initially
+    updateStatusBadges();
+});
+
+        function sendWhatsAppAlerts() {
+            const date = document.querySelector('input[name="date"]').value;
+            if (!date) {
+                alert('Please select a date first');
+                return;
+            }
+
+            if (confirm('Send WhatsApp alerts to parents of absent students?')) {
+                fetch('/send_whatsapp_attendance_alert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `date=${encodeURIComponent(date)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`✅ WhatsApp alerts sent to ${data.count} parents`);
+                    } else {
+                        alert(`❌ Error: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    alert('❌ Error sending WhatsApp alerts');
+                    console.error('Error:', error);
+                });
+            }
+        }
+    </script>
+
+<style>
+/* Custom Radio Button Styling */
+.present-radio:checked {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+}
+
+.absent-radio:checked {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.late-radio:checked {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25) !important;
+}
+
+/* Radio button hover effects */
+.present-radio:hover {
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 0.1rem rgba(25, 135, 84, 0.15) !important;
+}
+
+.absent-radio:hover {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.1rem rgba(220, 53, 69, 0.15) !important;
+}
+
+.late-radio:hover {
+    border-color: #ffc107 !important;
+    box-shadow: 0 0 0 0.1rem rgba(255, 193, 7, 0.15) !important;
+}
+
+/* Enhanced table row hover */
+tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05) !important;
+    transition: background-color 0.2s ease;
+}
+
+/* Status badge animations */
+.badge {
+    transition: all 0.3s ease;
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+/* Enhanced form check styling */
+.form-check-input {
+    width: 1.2em;
+    height: 1.2em;
+    margin-top: 0.1em;
+    border-width: 2px;
+    transition: all 0.2s ease;
+}
+
+.form-check-label i {
+    font-size: 1.1rem;
+    margin-left: 0.3rem;
+}
+
+/* Statistics cards enhancement */
+.card.bg-primary, .card.bg-success, .card.bg-danger, .card.bg-warning {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: transform 0.2s ease;
+}
+
+.card.bg-primary:hover, .card.bg-success:hover, .card.bg-danger:hover, .card.bg-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Button enhancements */
+.btn-outline-success:hover {
+    background-color: #198754;
+    border-color: #198754;
+    transform: translateY(-1px);
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    transform: translateY(-1px);
+}
+
+/* Table header styling */
+.table-dark th {
+    background-color: #2c3e50 !important;
+    border-color: #34495e !important;
+    color: #ecf0f1 !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+</style>
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+        <h5>No students found</h5>
+        <p class="text-muted">Please select a class or add students first.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

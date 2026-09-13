@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block page_title %}Create SMS Template{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus me-2"></i>Create New SMS Template</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.template_type.label(class="form-label") }}
+                            {{ form.template_type(class="form-select", onchange="updatePlaceholders()") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.message.label(class="form-label") }}
+                        {{ form.message(class="form-control", rows="5", placeholder="Type your SMS message here...") }}
+                        <div class="form-text">
+                            <strong>Available Placeholders:</strong>
+                            <div id="placeholders" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Preview:</label>
+                        <div id="preview" class="bg-light p-3 rounded">
+                            Type your message above to see preview...
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-custom">
+                            <i class="fas fa-save me-2"></i>Create Template
+                        </button>
+                        <a href="{{ url_for('sms_management') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updatePlaceholders() {
+    const templateType = document.getElementById('template_type').value;
+    const placeholdersDiv = document.getElementById('placeholders');
+
+    let placeholders = ['student_name', 'guardian_name', 'class_name'];
+
+    if (templateType === 'fee_due') {
+        placeholders = ['student_name', 'guardian_name', 'due_amount', 'due_date'];
+    } else if (templateType === 'exam_reminder') {
+        placeholders = ['student_name', 'exam_name', 'exam_date', 'exam_time'];
+    } else if (templateType === 'result_publish') {
+        placeholders = ['student_name', 'exam_name', 'total_marks', 'obtained_marks', 'grade'];
+    }
+
+    placeholdersDiv.innerHTML = placeholders.map(p => 
+        `<span class="badge bg-light text-dark me-1 cursor-pointer" onclick="insertPlaceholder('{${p}}')">{${p}}</span>`
+    ).join('');
+}
+
+function insertPlaceholder(placeholder) {
+    const textarea = document.getElementById('message');
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.substring(0, cursorPos);
+    const textAfter = textarea.value.substring(cursorPos);
+
+    textarea.value = textBefore + placeholder + textAfter;
+    textarea.focus();
+    textarea.setSelectionRange(cursorPos + placeholder.length, cursorPos + placeholder.length);
+    updatePreview();
+}
+
+function updatePreview() {
+    const message = document.getElementById('message').value;
+    const preview = document.getElementById('preview');
+
+    let previewText = message
+        .replace(/{student_name}/g, 'আহমেদ রহমান')
+        .replace(/{guardian_name}/g, 'মো. করিম উদ্দিন')
+        .replace(/{class_name}/g, 'Class 10 - A')
+        .replace(/{due_amount}/g, '৫০০০')
+        .replace(/{due_date}/g, '১৫/১২/২০২৪')
+        .replace(/{exam_name}/g, 'Final Exam')
+        .replace(/{exam_date}/g, '২০/১২/২০২৪')
+        .replace(/{total_marks}/g, '১০০')
+        .replace(/{obtained_marks}/g, '৮৫')
+        .replace(/{grade}/g, 'A+');
+
+    preview.textContent = previewText || 'Type your message above to see preview...';
+}
+
+// Initialize placeholders on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updatePlaceholders();
+    document.getElementById('message').addEventListener('input', updatePreview);
+});
+</script>
+{% endblock %}

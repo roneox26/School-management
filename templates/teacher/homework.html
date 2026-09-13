@@ -1,0 +1,105 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}হোমওয়ার্ক{% endblock %}
+{% block page_title %}হোমওয়ার্ক ব্যবস্থাপনা{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+  <div>
+    <h2 style="font-size:1.4rem;font-weight:800;">হোমওয়ার্ক ও অ্যাসাইনমেন্ট</h2>
+    <p style="color:var(--tp-muted);font-size:.875rem;margin-top:.25rem;">শিক্ষার্থীদের জন্য কাজ যোগ করুন</p>
+  </div>
+  <button onclick="document.getElementById('hwModal').style.display='flex'" class="tp-btn tp-btn-primary">
+    <i class="fas fa-plus"></i> নতুন হোমওয়ার্ক
+  </button>
+</div>
+
+<!-- Homework Grid -->
+{% if homeworks %}
+<div class="tp-hw-grid">
+  {% for hw in homeworks %}
+  <div class="tp-hw-card tp-animate">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;">
+      <div style="flex:1;">
+        <div class="tp-hw-title">{{ hw.title }}</div>
+        <div class="tp-hw-meta">
+          <span><i class="fas fa-layer-group"></i> {{ hw.class_name }}</span>
+          <span><i class="fas fa-book"></i> {{ hw.subject or '—' }}</span>
+        </div>
+        {% if hw.description %}
+        <div class="tp-hw-desc">{{ hw.description[:100] }}{% if hw.description|length > 100 %}...{% endif %}</div>
+        {% endif %}
+        {% if hw.due_date %}
+        <div class="tp-hw-due">
+          <i class="fas fa-clock"></i> জমার তারিখ: {{ hw.due_date }}
+        </div>
+        {% endif %}
+      </div>
+      <form method="POST" action="{{ url_for('delete_homework', hw_id=hw.id) }}"
+            onsubmit="return confirm('মুছে ফেলতে চান?')">
+        <button type="submit" class="tp-btn tp-btn-danger tp-btn-sm" style="flex-shrink:0;">
+          <i class="fas fa-trash"></i>
+        </button>
+      </form>
+    </div>
+    <div style="font-size:.72rem;color:var(--tp-muted);margin-top:.75rem;">
+      <i class="fas fa-calendar"></i> যোগ করা হয়েছে: {{ hw.created_at[:10] }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="tp-card">
+  <div class="tp-card-body" style="text-align:center;padding:3rem;color:var(--tp-muted);">
+    <i class="fas fa-book-open" style="font-size:3rem;opacity:.3;display:block;margin-bottom:1rem;"></i>
+    <div style="font-weight:600;margin-bottom:.5rem;">কোনো হোমওয়ার্ক নেই</div>
+    <div style="font-size:.875rem;">উপরে "নতুন হোমওয়ার্ক" বাটনে ক্লিক করে যোগ করুন।</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal -->
+<div id="hwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--tp-radius);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;">
+    <div style="padding:1.25rem;border-bottom:1px solid var(--tp-border);display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="font-size:1rem;font-weight:700;">নতুন হোমওয়ার্ক যোগ করুন</h3>
+      <button onclick="document.getElementById('hwModal').style.display='none'"
+              style="background:none;border:none;font-size:1.25rem;cursor:pointer;color:var(--tp-muted);">✕</button>
+    </div>
+    <form method="POST" action="{{ url_for('create_homework') }}" style="padding:1.25rem;">
+      <div class="tp-form-group">
+        <label class="tp-label">শিরোনাম *</label>
+        <input type="text" name="title" class="tp-input" placeholder="যেমন: গণিত অধ্যায় ৩ অনুশীলনী" required>
+      </div>
+      <div class="tp-form-group">
+        <label class="tp-label">ক্লাস *</label>
+        <select name="class_id" class="tp-select" required>
+          <option value="">ক্লাস নির্বাচন করুন</option>
+          {% for cls in my_classes %}
+          <option value="{{ cls.id }}">{{ cls.name }} {{ cls.section }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="tp-form-group">
+        <label class="tp-label">বিষয়</label>
+        <input type="text" name="subject" class="tp-input" placeholder="যেমন: গণিত, বাংলা...">
+      </div>
+      <div class="tp-form-group">
+        <label class="tp-label">বিবরণ</label>
+        <textarea name="description" class="tp-textarea" placeholder="হোমওয়ার্কের বিস্তারিত বিবরণ..."></textarea>
+      </div>
+      <div class="tp-form-group">
+        <label class="tp-label">জমার তারিখ</label>
+        <input type="date" name="due_date" class="tp-input">
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+        <button type="button" onclick="document.getElementById('hwModal').style.display='none'"
+                class="tp-btn tp-btn-outline">বাতিল</button>
+        <button type="submit" class="tp-btn tp-btn-primary">
+          <i class="fas fa-save"></i> সংরক্ষণ করুন
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

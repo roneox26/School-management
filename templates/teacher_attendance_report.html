@@ -1,0 +1,224 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}Teacher Attendance Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-chalkboard-teacher me-2"></i>Teacher Attendance Report</h4>
+    <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Reports
+    </a>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>{{ total_records }}</h5>
+                        <p class="mb-0">Total Records</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>{{ present_records }}</h5>
+                        <p class="mb-0">Present Days</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>{{ absent_records }}</h5>
+                        <p class="mb-0">Absent Days</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-times-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>
+                            {% if total_records > 0 %}
+                                {{ "%.1f"|format((present_records / total_records * 100)) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </h5>
+                        <p class="mb-0">Overall Attendance</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-percentage fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Teacher-wise Attendance -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-users me-2"></i>Teacher-wise Attendance ({{ current_month }})</h5>
+    </div>
+    <div class="card-body">
+        {% if teacher_attendance_data %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Teacher Name</th>
+                        <th>Subject</th>
+                        <th>Total Days</th>
+                        <th>Present</th>
+                        <th>Late</th>
+                        <th>Leave</th>
+                        <th>Absent</th>
+                        <th>Attendance %</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for teacher in teacher_attendance_data %}
+                    <tr>
+                        <td><strong>{{ teacher.employee_id }}</strong></td>
+                        <td>{{ teacher.name }}</td>
+                        <td>{{ teacher.subject }}</td>
+                        <td>{{ teacher.total_days }}</td>
+                        <td><span class="badge bg-success">{{ teacher.present_days }}</span></td>
+                        <td><span class="badge bg-warning">{{ teacher.late_days }}</span></td>
+                        <td><span class="badge bg-info">{{ teacher.leave_days }}</span></td>
+                        <td><span class="badge bg-danger">{{ teacher.absent_days }}</span></td>
+                        <td>
+                            <strong class="
+                                {% if teacher.attendance_percentage >= 95 %}text-success
+                                {% elif teacher.attendance_percentage >= 85 %}text-warning
+                                {% else %}text-danger{% endif %}">
+                                {{ teacher.attendance_percentage }}%
+                            </strong>
+                        </td>
+                        <td>
+                            {% if teacher.attendance_percentage >= 95 %}
+                                <span class="badge bg-success">Excellent</span>
+                            {% elif teacher.attendance_percentage >= 85 %}
+                                <span class="badge bg-warning">Good</span>
+                            {% elif teacher.attendance_percentage >= 75 %}
+                                <span class="badge bg-warning">Average</span>
+                            {% else %}
+                                <span class="badge bg-danger">Poor</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5>No teacher attendance data found</h5>
+            <p class="text-muted">Please mark teacher attendance first.</p>
+            <a href="{{ url_for('teacher_attendance') }}" class="btn btn-custom">
+                <i class="fas fa-calendar-check me-2"></i>Mark Teacher Attendance
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Daily Attendance Summary -->
+{% if daily_attendance %}
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-calendar-alt me-2"></i>Daily Attendance Summary (Last 15 Days)</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Total Teachers</th>
+                        <th>Present</th>
+                        <th>Late</th>
+                        <th>Leave</th>
+                        <th>Absent</th>
+                        <th>Attendance %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in daily_attendance %}
+                    <tr>
+                        <td><strong>{{ day.date }}</strong></td>
+                        <td>{{ day.total }}</td>
+                        <td><span class="badge bg-success">{{ day.present }}</span></td>
+                        <td><span class="badge bg-warning">{{ day.late }}</span></td>
+                        <td><span class="badge bg-info">{{ day.leave }}</span></td>
+                        <td><span class="badge bg-danger">{{ day.absent }}</span></td>
+                        <td>
+                            <strong class="
+                                {% if day.percentage >= 95 %}text-success
+                                {% elif day.percentage >= 85 %}text-warning
+                                {% else %}text-danger{% endif %}">
+                                {{ day.percentage }}%
+                            </strong>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Export Options -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="fas fa-download me-2"></i>Export Options</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <a href="{{ url_for('export_data', data_type='teacher_attendance', format='csv') }}" class="btn btn-outline-success w-100">
+                    <i class="fas fa-file-csv me-2"></i>Export as CSV
+                </a>
+            </div>
+            <div class="col-md-6">
+                <a href="{{ url_for('export_data', data_type='teacher_attendance', format='pdf') }}" class="btn btn-outline-danger w-100">
+                    <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

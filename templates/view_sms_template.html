@@ -1,0 +1,195 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}View SMS Template{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h5><i class="fas fa-eye me-2"></i>{{ template.name }}</h5>
+                <div>
+                    <a href="{{ url_for('edit_sms_template', id=template.id) }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <a href="{{ url_for('sms_management') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Template Information</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Name:</strong></td>
+                                <td>{{ template.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Type:</strong></td>
+                                <td>
+                                    <span class="badge bg-primary">{{ template.template_type.replace('_', ' ').title() }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Created:</strong></td>
+                                <td>{{ template.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if template.is_active else 'danger' }}">
+                                        {{ 'Active' if template.is_active else 'Inactive' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Available Placeholders</h6>
+                        <div class="mb-3">
+                            {% if template.placeholders %}
+                                {% set placeholders = template.placeholders | from_json %}
+                                {% for placeholder in placeholders %}
+                                    <span class="badge bg-light text-dark me-1">{{{ placeholder }}}</span>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6>Template Message</h6>
+                    <div class="border rounded p-3 bg-light">
+                        {{ template.message }}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6>Preview</h6>
+                    <div class="border rounded p-3 bg-info bg-opacity-10">
+                        {% set preview_message = template.message.replace('{student_name}', 'রহিম আহমেদ').replace('{guardian_name}', 'মো. করিম উদ্দিন').replace('{class_name}', 'Class 10 - A').replace('{due_amount}', '1500').replace('{due_date}', '15-08-2024').replace('{exam_name}', 'Half Yearly Exam').replace('{exam_date}', '20-08-2024').replace('{total_marks}', '100').replace('{obtained_marks}', '85').replace('{grade}', 'A+') %}
+                        {{ preview_message }}
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('send_sms_page', template_id=template.id) }}" class="btn btn-success">
+                        <i class="fas fa-paper-plane me-2"></i>Send SMS
+                    </a>
+                    <a href="{{ url_for('edit_sms_template', id=template.id) }}" class="btn btn-warning">
+                        <i class="fas fa-edit me-2"></i>Edit Template
+                    </a>
+                    <button class="btn btn-danger" onclick="deleteTemplate({{ template.id }})">
+                        <i class="fas fa-trash me-2"></i>Delete Template
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteTemplate(templateId) {
+    if (confirm('আপনি কি এই টেমপ্লেটটি ডিলিট করতে চান? এই কাজটি পূর্বাবস্থায় ফিরিয়ে আনা যাবে না।')) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete_sms_template/' + templateId;
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name=csrf-token]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}
+{% extends "base.html" %}
+
+{% block page_title %}View SMS Template{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-eye me-2"></i>View SMS Template</h4>
+    <div>
+        <a href="{{ url_for('edit_sms_template', id=template.id) }}" class="btn btn-warning">
+            <i class="fas fa-edit me-1"></i>Edit Template
+        </a>
+        <a href="{{ url_for('sms_management') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label"><strong>Template Name:</strong></label>
+                <p>{{ template.name }}</p>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label"><strong>Template Type:</strong></label>
+                <p><span class="badge bg-primary">{{ template.template_type.replace('_', ' ').title() }}</span></p>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label"><strong>Message Template:</strong></label>
+            <div class="alert alert-light">
+                {{ template.message }}
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label"><strong>Available Placeholders:</strong></label>
+            <div>
+                {% if template.placeholders %}
+                    {% for placeholder in template.placeholders|from_json %}
+                    <span class="badge bg-info me-1">{{{ placeholder }}}</span>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label"><strong>Created:</strong></label>
+                <p>{{ template.created_at[:10] if template.created_at else 'N/A' }}</p>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label"><strong>Status:</strong></label>
+                <p>
+                    {% if template.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('send_sms_page', template_id=template.id) }}" class="btn btn-success">
+                <i class="fas fa-paper-plane me-1"></i>Send SMS using this template
+            </a>
+            <a href="{{ url_for('edit_sms_template', id=template.id) }}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i>Edit Template
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

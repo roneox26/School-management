@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}হোমওয়ার্ক ওভারভিউ{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1 fw-bold">হোমওয়ার্ক ওভারভিউ</h1>
+      <p class="text-muted mb-0">সব ক্লাসের অ্যাসাইনমেন্ট এক জায়গায় দেখুন</p>
+    </div>
+    <span class="badge bg-primary fs-6 px-3 py-2">{{ homeworks|length }} টি</span>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      {% if homeworks %}
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>শিরোনাম</th>
+              <th>বিষয়</th>
+              <th>ক্লাস</th>
+              <th>শিক্ষক</th>
+              <th>জমাদানের তারিখ</th>
+              <th>তৈরির তারিখ</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for homework in homeworks %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ homework.title }}</div>
+                {% if homework.description %}<small class="text-muted">{{ homework.description[:100] }}</small>{% endif %}
+              </td>
+              <td>{{ homework.subject or '—' }}</td>
+              <td>{{ homework.class_name }}</td>
+              <td>{{ homework.teacher_name }}</td>
+              <td>{{ homework.due_date or '—' }}</td>
+              <td>{{ homework.created_at[:10] if homework.created_at else '—' }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="fas fa-book-open fa-3x mb-3 d-block opacity-25"></i>
+        কোনো হোমওয়ার্ক তৈরি করা হয়নি
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

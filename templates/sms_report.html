@@ -1,0 +1,54 @@
+
+{% extends "base.html" %}
+
+{% block page_title %}SMS Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-sms me-2"></i>SMS Analytics Report</h4>
+    <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Reports
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-chart-pie me-2"></i>SMS Template Usage Statistics</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Template Name</th>
+                        <th>Type</th>
+                        <th>Total Sent</th>
+                        <th>Successful</th>
+                        <th>Failed</th>
+                        <th>Success Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in sms_data %}
+                    <tr>
+                        <td>{{ record.template_name }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ record.template_type.replace('_', ' ').title() }}</span>
+                        </td>
+                        <td>{{ record.total_sent }}</td>
+                        <td>{{ record.successful }}</td>
+                        <td>{{ record.failed }}</td>
+                        <td>
+                            {% set success_rate = (record.successful / record.total_sent * 100) if record.total_sent > 0 else 0 %}
+                            <span class="badge bg-{% if success_rate >= 90 %}success{% elif success_rate >= 70 %}warning{% else %}danger{% endif %}">
+                                {{ "%.1f"|format(success_rate) }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

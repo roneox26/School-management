@@ -1,0 +1,74 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}পরীক্ষা ও রেজাল্ট{% endblock %}
+{% block page_title %}পরীক্ষা ও রেজাল্ট{% endblock %}
+
+{% block content %}
+<!-- Header Banner -->
+<div style="background:linear-gradient(135deg,#0d9488,#10b981);border-radius:16px;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+  <div>
+    <div style="font-size:.8rem;opacity:.8;">পরীক্ষার ফলাফল এন্ট্রি ও ব্যবস্থাপনা</div>
+    <div style="font-size:1.2rem;font-weight:800;">পরীক্ষা ও রেজাল্ট</div>
+  </div>
+  <div style="font-size:2.5rem;opacity:.3;">📝</div>
+</div>
+
+<!-- Exams List -->
+{% if exams %}
+<div class="tp-card tp-animate">
+  <div class="tp-card-header">
+    <div class="tp-card-title"><i class="fas fa-clipboard-list" style="color:var(--tp-primary)"></i> পরীক্ষার তালিকা</div>
+  </div>
+  <div class="tp-card-body">
+    <div style="display:flex;flex-direction:column;gap:.75rem;">
+      {% for exam in exams %}
+      <div style="border:1.5px solid var(--tp-border);border-radius:12px;padding:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
+        <div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--tp-text);">{{ exam.name }}</div>
+          <div style="font-size:.78rem;color:var(--tp-muted);margin-top:.25rem;">
+            <span><i class="fas fa-book"></i> {{ exam.subject or 'N/A' }}</span>
+            <span style="margin-left:.75rem;"><i class="fas fa-users"></i> {{ exam.class_name }}</span>
+            {% if exam.exam_date %}
+            <span style="margin-left:.75rem;"><i class="fas fa-calendar"></i> {{ exam.exam_date }}</span>
+            {% endif %}
+            <span style="margin-left:.75rem;"><i class="fas fa-star"></i> {{ exam.total_marks or 100 }} নম্বর</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <a href="{{ url_for('teacher_exam_results', exam_id=exam.id) }}" class="tp-btn tp-btn-primary" style="font-size:.8rem;padding:.4rem .875rem;">
+            <i class="fas fa-pen-to-square"></i> রেজাল্ট এন্ট্রি
+          </a>
+          <a href="{{ url_for('teacher_exam_results', exam_id=exam.id) }}" class="tp-btn tp-btn-outline" style="font-size:.8rem;padding:.4rem .875rem;">
+            <i class="fas fa-eye"></i> দেখুন
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="tp-card tp-animate">
+  <div class="tp-card-body" style="text-align:center;padding:3rem;">
+    <i class="fas fa-clipboard-list" style="font-size:3rem;color:var(--tp-border);display:block;margin-bottom:1rem;"></i>
+    <div style="font-weight:700;font-size:1rem;color:var(--tp-text);margin-bottom:.5rem;">কোনো পরীক্ষা নেই</div>
+    <div style="color:var(--tp-muted);font-size:.875rem;">আপনার ক্লাসে এখনো কোনো পরীক্ষা যোগ করা হয়নি।</div>
+    <div style="margin-top:1rem;font-size:.8rem;color:var(--tp-muted);">Admin প্যানেল থেকে পরীক্ষা যোগ করুন।</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Quick Guide -->
+<div class="tp-card tp-animate" style="margin-top:1rem;">
+  <div class="tp-card-header">
+    <div class="tp-card-title"><i class="fas fa-info-circle" style="color:#f59e0b"></i> রেজাল্ট এন্ট্রি গাইড</div>
+  </div>
+  <div class="tp-card-body">
+    <ol style="color:var(--tp-muted);font-size:.875rem;padding-left:1.25rem;display:flex;flex-direction:column;gap:.5rem;">
+      <li>পরীক্ষার পাশে <strong>রেজাল্ট এন্ট্রি</strong> বাটনে ক্লিক করুন</li>
+      <li>প্রতিটি শিক্ষার্থীর প্রাপ্ত নম্বর লিখুন</li>
+      <li>সব নম্বর দেওয়া হলে <strong>সাবমিট</strong> করুন</li>
+      <li>অভিভাবকরা Guardian Portal থেকে রেজাল্ট দেখতে পাবেন</li>
+    </ol>
+  </div>
+</div>
+{% endblock %}

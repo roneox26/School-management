@@ -1,0 +1,140 @@
+{% extends "guardian/base_guardian.html" %}
+{% block title %}ড্যাশবোর্ড{% endblock %}
+
+{% block content %}
+<!-- Child Switcher -->
+{% if all_students|length > 1 %}
+<div class="gp-child-switcher">
+  <div class="gp-child-switcher-inner">
+    <div class="gp-child-scroll">
+      {% for s in all_students %}
+      <form method="POST" action="{{ url_for('guardian_switch_child') }}" style="display:inline">
+        <input type="hidden" name="student_id" value="{{ s.id }}">
+        <button type="submit" class="gp-child-chip {% if active_student and s.id == active_student.id %}active{% endif %}">
+          <div class="gp-child-avatar">{{ s.name[0] if s.name else '?' }}</div>
+          <div>
+            <div class="gp-child-name">{{ s.name }}</div>
+            <div class="gp-child-class">{{ s.class_name }}</div>
+          </div>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="gp-page">
+{% if active_student %}
+
+<!-- Welcome Card -->
+<div class="gp-welcome-card">
+  <div class="gp-welcome-avatar">{{ active_student.name[0] if active_student.name else '?' }}</div>
+  <div class="gp-welcome-info">
+    <div class="gp-welcome-name">{{ active_student.name }}</div>
+    <div class="gp-welcome-class">{{ active_student.class_name }}</div>
+    <div class="gp-welcome-roll">রোল: {{ active_student.roll_number }}</div>
+  </div>
+</div>
+
+<!-- Quick Stats Grid -->
+<div class="gp-stat-grid">
+  <div class="gp-stat-card gp-stat-green">
+    <div class="gp-stat-icon"><i class="fas fa-calendar-check"></i></div>
+    <div class="gp-stat-value">{{ stats.att_pct }}%</div>
+    <div class="gp-stat-label">এই মাসে হাজিরা</div>
+    <div class="gp-stat-sub">{{ stats.present_count }} / {{ stats.total_att }} দিন</div>
+  </div>
+  <div class="gp-stat-card gp-stat-red">
+    <div class="gp-stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="gp-stat-value">৳{{ stats.due_fee|int }}</div>
+    <div class="gp-stat-label">বাকি ফি</div>
+    <div class="gp-stat-sub">পরিশোধ: ৳{{ stats.paid_fee|int }}</div>
+  </div>
+  <div class="gp-stat-card gp-stat-blue">
+    <div class="gp-stat-icon"><i class="fas fa-book-open"></i></div>
+    <div class="gp-stat-value">{{ stats.pending_hw }}</div>
+    <div class="gp-stat-label">হোমওয়ার্ক</div>
+    <div class="gp-stat-sub">সক্রিয় অ্যাসাইনমেন্ট</div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="gp-section-title">দ্রুত অ্যাকসেস</div>
+<div class="gp-quick-links">
+  <a href="{{ url_for('guardian_class_tracker') }}" class="gp-quick-link">
+    <div class="gp-quick-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+      <i class="fas fa-broadcast-tower"></i>
+    </div>
+    <div class="gp-quick-label">ক্লাস ট্র্যাকার</div>
+    <div class="gp-quick-sub">রিয়েলটাইম আপডেট</div>
+  </a>
+  <a href="{{ url_for('guardian_attendance') }}" class="gp-quick-link">
+    <div class="gp-quick-icon" style="background:linear-gradient(135deg,#10b981,#059669);">
+      <i class="fas fa-calendar-check"></i>
+    </div>
+    <div class="gp-quick-label">হাজিরা রিপোর্ট</div>
+    <div class="gp-quick-sub">মাসিক ক্যালেন্ডার</div>
+  </a>
+  <a href="{{ url_for('guardian_fees') }}" class="gp-quick-link">
+    <div class="gp-quick-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+      <i class="fas fa-receipt"></i>
+    </div>
+    <div class="gp-quick-label">ফি বিবরণ</div>
+    <div class="gp-quick-sub">পেমেন্ট ইতিহাস</div>
+  </a>
+  <a href="{{ url_for('guardian_academic') }}" class="gp-quick-link">
+    <div class="gp-quick-icon" style="background:linear-gradient(135deg,#06b6d4,#0284c7);">
+      <i class="fas fa-graduation-cap"></i>
+    </div>
+    <div class="gp-quick-label">পড়াশোনা</div>
+    <div class="gp-quick-sub">হোমওয়ার্ক ও রেজাল্ট</div>
+  </a>
+  <a href="{{ url_for('guardian_messages') }}" class="gp-quick-link">
+    <div class="gp-quick-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
+      <i class="fas fa-comment-dots"></i>
+    </div>
+    <div class="gp-quick-label">শিক্ষক বার্তা</div>
+    <div class="gp-quick-sub">যোগাযোগ করুন</div>
+  </a>
+  <a href="{{ url_for('guardian_leave') }}" class="gp-quick-link">
+    <div class="gp-quick-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
+      <i class="fas fa-clipboard-list"></i>
+    </div>
+    <div class="gp-quick-label">ছুটির আবেদন</div>
+    <div class="gp-quick-sub">স্ট্যাটাস দেখুন</div>
+  </a>
+</div>
+
+<!-- Recent Notices -->
+{% if recent_notices %}
+<div class="gp-section-title">সাম্প্রতিক নোটিশ</div>
+<div class="gp-notice-feed">
+  {% for notice in recent_notices %}
+  <div class="gp-notice-item">
+    <div class="gp-notice-dot"></div>
+    <div class="gp-notice-content">
+      <div class="gp-notice-title">{{ notice.title }}</div>
+      <div class="gp-notice-meta">
+        <span><i class="fas fa-user"></i> {{ notice.created_by_name or 'Admin' }}</span>
+        <span><i class="fas fa-clock"></i> {{ notice.created_at[:10] }}</span>
+      </div>
+      {% if notice.body %}
+      <div class="gp-notice-body">{{ notice.body[:120] }}{% if notice.body|length > 120 %}...{% endif %}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+<!-- No Student Linked -->
+<div style="text-align:center;padding:3rem 1.5rem;">
+  <div style="font-size:4rem;margin-bottom:1rem;opacity:.3;">👶</div>
+  <div style="font-size:1.1rem;font-weight:700;color:var(--gp-text);margin-bottom:.5rem;">কোনো শিক্ষার্থী সংযুক্ত নেই</div>
+  <div style="color:var(--gp-muted);font-size:.875rem;">Admin-এর সাথে যোগাযোগ করুন আপনার সন্তানের অ্যাকাউন্ট সংযুক্ত করতে।</div>
+</div>
+{% endif %}
+</div>
+{% endblock %}

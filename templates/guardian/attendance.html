@@ -1,0 +1,139 @@
+{% extends "guardian/base_guardian.html" %}
+{% block title %}হাজিরা রিপোর্ট{% endblock %}
+
+{% block extra_css %}
+<style>
+.att-summary { display: flex; gap: .75rem; padding: 1rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
+.att-summary-card { flex: 1; text-align: center; padding: .75rem .5rem; border-radius: 12px; }
+.att-s-val { font-size: 1.4rem; font-weight: 800; }
+.att-s-lbl { font-size: .7rem; color: #6b7280; margin-top: .2rem; }
+.att-s-present { background: #d1fae5; } .att-s-present .att-s-val { color: #065f46; }
+.att-s-absent  { background: #fee2e2; } .att-s-absent .att-s-val  { color: #991b1b; }
+.att-s-late    { background: #fef3c7; } .att-s-late .att-s-val    { color: #92400e; }
+
+.att-progress-bar {
+  height: 10px; border-radius: 999px; background: #f3f4f6;
+  margin: .625rem 1rem; overflow: hidden;
+}
+.att-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#10b981,#059669); transition: width .8s ease; }
+.att-pct-label { text-align: center; font-size: .8rem; color: #6b7280; font-weight: 600; margin-bottom: 1rem; }
+
+.att-calendar { padding: .75rem 1rem 1rem; }
+.att-month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: .875rem; }
+.att-month-nav a { background: #f3f4f6; border-radius: 8px; padding: .35rem .75rem; color: #4b5563; font-size: .85rem; text-decoration: none; }
+.att-month-title { font-size: 1rem; font-weight: 700; color: #1e1b4b; }
+
+.att-record-list { display: flex; flex-direction: column; gap: .625rem; }
+.att-record-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #fff; border-radius: 10px; padding: .75rem 1rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,.05); border-left: 4px solid #e5e7eb;
+}
+.att-record-item.present { border-left-color: #10b981; }
+.att-record-item.absent  { border-left-color: #ef4444; }
+.att-record-item.late    { border-left-color: #f59e0b; }
+.att-record-date { font-size: .85rem; font-weight: 600; color: #374151; }
+.att-record-day  { font-size: .72rem; color: #9ca3af; }
+.att-badge { border-radius: 999px; padding: .25rem .75rem; font-size: .72rem; font-weight: 700; }
+.badge-present { background:#d1fae5; color:#065f46; }
+.badge-absent  { background:#fee2e2; color:#991b1b; }
+.badge-late    { background:#fef3c7; color:#92400e; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Child Switcher -->
+{% if all_students|length > 1 %}
+<div class="gp-child-switcher">
+  <div class="gp-child-switcher-inner">
+    <div class="gp-child-scroll">
+      {% for s in all_students %}
+      <form method="POST" action="{{ url_for('guardian_switch_child') }}" style="display:inline">
+        <input type="hidden" name="student_id" value="{{ s.id }}">
+        <button type="submit" class="gp-child-chip {% if active_student and s.id == active_student.id %}active{% endif %}">
+          <div class="gp-child-avatar">{{ s.name[0] if s.name else '?' }}</div>
+          <div>
+            <div class="gp-child-name">{{ s.name }}</div>
+            <div class="gp-child-class">{{ s.class_name }}</div>
+          </div>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="gp-page" style="padding-top:.5rem;">
+  <div class="gp-section-title" style="margin-bottom:.75rem;">হাজিরা রিপোর্ট</div>
+
+{% if active_student %}
+  <!-- Summary -->
+  <div class="att-summary">
+    <div class="att-summary-card att-s-present">
+      <div class="att-s-val">{{ present_count }}</div>
+      <div class="att-s-lbl">উপস্থিত</div>
+    </div>
+    <div class="att-summary-card att-s-absent">
+      <div class="att-s-val">{{ absent_count }}</div>
+      <div class="att-s-lbl">অনুপস্থিত</div>
+    </div>
+    <div class="att-summary-card att-s-late">
+      <div class="att-s-val">{{ late_count }}</div>
+      <div class="att-s-lbl">দেরিতে</div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div style="padding: .75rem 1rem 0;">
+    <div class="att-progress-bar">
+      <div class="att-progress-fill" style="width: {{ att_pct }}%"></div>
+    </div>
+    <div class="att-pct-label">{{ att_pct }}% উপস্থিতি — {{ month_label }}</div>
+  </div>
+
+  <!-- Month Nav -->
+  <div class="att-calendar">
+    <div class="att-month-nav">
+      {% set prev_year = month_param[:4]|int %}
+      {% set prev_month = month_param[5:]|int - 1 %}
+      {% if prev_month == 0 %}{% set prev_month = 12 %}{% set prev_year = prev_year - 1 %}{% endif %}
+      <a href="?month={{ '%04d-%02d' % (prev_year, prev_month) }}"><i class="fas fa-chevron-left"></i></a>
+      <div class="att-month-title">{{ month_label }}</div>
+      {% set next_year = month_param[:4]|int %}
+      {% set next_month = month_param[5:]|int + 1 %}
+      {% if next_month == 13 %}{% set next_month = 1 %}{% set next_year = next_year + 1 %}{% endif %}
+      <a href="?month={{ '%04d-%02d' % (next_year, next_month) }}"><i class="fas fa-chevron-right"></i></a>
+    </div>
+
+    <!-- Records -->
+    {% if attendance_records %}
+    <div class="att-record-list">
+      {% for rec in attendance_records %}
+      <div class="att-record-item {{ rec.status|lower }}">
+        <div>
+          <div class="att-record-date">{{ rec.date }}</div>
+          <div class="att-record-day">{{ rec.status }}</div>
+        </div>
+        <span class="att-badge badge-{{ rec.status|lower }}">
+          {% if rec.status == 'Present' %}✓ উপস্থিত
+          {% elif rec.status == 'Absent' %}✗ অনুপস্থিত
+          {% else %}⏰ দেরিতে{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:2.5rem 1rem;color:#9ca3af;">
+      <i class="fas fa-calendar-times" style="font-size:2.5rem;display:block;margin-bottom:.75rem;opacity:.3;"></i>
+      <div style="font-weight:600;">এই মাসে কোনো হাজিরা তথ্য নেই</div>
+    </div>
+    {% endif %}
+  </div>
+{% else %}
+  <div style="text-align:center;padding:3rem;color:#9ca3af;">
+    <div style="font-weight:600;">শিক্ষার্থী সংযুক্ত নেই</div>
+  </div>
+{% endif %}
+</div>
+{% endblock %}

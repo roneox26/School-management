@@ -1,0 +1,130 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}প্রোফাইল ও ছুটি{% endblock %}
+{% block page_title %}প্রোফাইল ও ছুটির আবেদন{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;flex-wrap:wrap;">
+
+  <!-- Profile Card -->
+  <div class="tp-card tp-animate">
+    <div class="tp-card-header">
+      <div class="tp-card-title"><i class="fas fa-user-circle" style="color:var(--tp-primary)"></i> প্রোফাইল তথ্য</div>
+    </div>
+    <div class="tp-card-body">
+      <!-- Avatar -->
+      <div style="text-align:center;margin-bottom:1.25rem;">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#10b981);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto .75rem;">
+          {{ profile.name[0] if profile.name else current_user.username[0].upper() }}
+        </div>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--tp-text);">{{ profile.name or current_user.username }}</div>
+        <div style="font-size:.8rem;color:var(--tp-muted);margin-top:.25rem;">শিক্ষক</div>
+      </div>
+
+      <!-- Profile Fields -->
+      <div style="display:flex;flex-direction:column;gap:.75rem;">
+        {% if profile.employee_id %}
+        <div style="display:flex;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--tp-border);">
+          <span style="font-size:.8rem;color:var(--tp-muted);font-weight:600;"><i class="fas fa-id-badge"></i> কর্মচারী আইডি</span>
+          <span style="font-size:.85rem;font-weight:700;color:var(--tp-text);">{{ profile.employee_id }}</span>
+        </div>
+        {% endif %}
+        {% if profile.subject %}
+        <div style="display:flex;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--tp-border);">
+          <span style="font-size:.8rem;color:var(--tp-muted);font-weight:600;"><i class="fas fa-book"></i> বিষয়</span>
+          <span style="font-size:.85rem;font-weight:700;color:var(--tp-text);">{{ profile.subject }}</span>
+        </div>
+        {% endif %}
+        {% if profile.phone %}
+        <div style="display:flex;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--tp-border);">
+          <span style="font-size:.8rem;color:var(--tp-muted);font-weight:600;"><i class="fas fa-phone"></i> ফোন</span>
+          <span style="font-size:.85rem;font-weight:700;color:var(--tp-text);">{{ profile.phone }}</span>
+        </div>
+        {% endif %}
+        {% if profile.email %}
+        <div style="display:flex;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--tp-border);">
+          <span style="font-size:.8rem;color:var(--tp-muted);font-weight:600;"><i class="fas fa-envelope"></i> ইমেইল</span>
+          <span style="font-size:.85rem;font-weight:700;color:var(--tp-text);">{{ profile.email }}</span>
+        </div>
+        {% endif %}
+        {% if profile.joining_date %}
+        <div style="display:flex;justify-content:space-between;padding:.625rem 0;">
+          <span style="font-size:.8rem;color:var(--tp-muted);font-weight:600;"><i class="fas fa-calendar"></i> যোগদান তারিখ</span>
+          <span style="font-size:.85rem;font-weight:700;color:var(--tp-text);">{{ profile.joining_date }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Login Info -->
+      <div style="margin-top:1rem;padding:.875rem;background:rgba(13,148,136,.06);border-radius:10px;border:1px solid rgba(13,148,136,.2);">
+        <div style="font-size:.75rem;color:var(--tp-muted);margin-bottom:.25rem;">লগইন তথ্য</div>
+        <div style="font-size:.875rem;font-weight:700;color:var(--tp-text);"><i class="fas fa-user"></i> {{ current_user.username }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leave Request -->
+  <div>
+    <!-- Submit Leave -->
+    <div class="tp-card tp-animate" style="margin-bottom:1rem;">
+      <div class="tp-card-header">
+        <div class="tp-card-title"><i class="fas fa-calendar-times" style="color:#ef4444"></i> ছুটির আবেদন</div>
+      </div>
+      <div class="tp-card-body">
+        <form method="POST" action="{{ url_for('teacher_submit_leave') }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.625rem;margin-bottom:.875rem;">
+            <div>
+              <label class="tp-label">থেকে তারিখ</label>
+              <input type="date" name="from_date" required class="tp-input">
+            </div>
+            <div>
+              <label class="tp-label">পর্যন্ত তারিখ</label>
+              <input type="date" name="to_date" required class="tp-input">
+            </div>
+          </div>
+          <div style="margin-bottom:1rem;">
+            <label class="tp-label">কারণ</label>
+            <textarea name="reason" required class="tp-input" rows="3" placeholder="ছুটির কারণ লিখুন..."></textarea>
+          </div>
+          <button type="submit" class="tp-btn tp-btn-primary" style="width:100%;">
+            <i class="fas fa-paper-plane"></i> আবেদন জমা দিন
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Leave History -->
+    <div class="tp-card tp-animate">
+      <div class="tp-card-header">
+        <div class="tp-card-title"><i class="fas fa-history" style="color:var(--tp-primary)"></i> আবেদনের ইতিহাস</div>
+      </div>
+      <div class="tp-card-body" style="max-height:300px;overflow-y:auto;">
+        {% if leaves %}
+        <div style="display:flex;flex-direction:column;gap:.625rem;">
+          {% for leave in leaves %}
+          <div style="border-radius:10px;padding:.75rem;background:var(--tp-bg);
+            border-left:4px solid {{ '#10b981' if leave.status == 'approved' else ('#ef4444' if leave.status == 'rejected' else '#f59e0b') }};">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-size:.85rem;font-weight:700;color:var(--tp-text);">{{ leave.from_date }} → {{ leave.to_date }}</div>
+                <div style="font-size:.75rem;color:var(--tp-muted);margin-top:.2rem;">{{ leave.reason }}</div>
+              </div>
+              <span style="border-radius:999px;padding:.25rem .75rem;font-size:.7rem;font-weight:700;
+                {{ 'background:#d1fae5;color:#065f46;' if leave.status == 'approved' else ('background:#fee2e2;color:#991b1b;' if leave.status == 'rejected' else 'background:#fef3c7;color:#92400e;') }}">
+                {% if leave.status == 'approved' %}✓ অনুমোদিত
+                {% elif leave.status == 'rejected' %}✗ প্রত্যাখ্যাত
+                {% else %}⏳ অপেক্ষায়{% endif %}
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:1.5rem;color:var(--tp-muted);font-size:.875rem;">
+          কোনো আবেদন নেই
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

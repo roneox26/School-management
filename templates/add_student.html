@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block page_title %}Add Student{% endblock %}
+{% block breadcrumb %} / <a href="{{ url_for('students') }}">Students</a> / <span>Add New</span>{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <div class="page-header-left">
+        <h1 class="page-title">Add New Student</h1>
+        <p class="page-subtitle">Fill in the student information below to create a new record</p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{{ url_for('students') }}" class="btn btn-ghost">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+{% if not classes %}
+<div class="alert alert-warning animate-in">
+    <span class="alert-icon"><i class="fas fa-exclamation-triangle"></i></span>
+    <div class="alert-body">No classes available. Please <a href="{{ url_for('add_class') }}"
+            style="font-weight:700;">create a class</a> first before adding students.</div>
+</div>
+{% else %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card animate-in">
+            <div class="card-header">
+                <div class="card-header-title">
+                    <div class="card-header-icon"><i class="fas fa-user-plus"></i></div>
+                    Student Personal Information
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate id="addStudentForm">
+                    {{ form.hidden_tag() }}
+
+                    <!-- Row 1: Name + Roll -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-7">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.name.label.text }}</label>
+                                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""),
+                                placeholder="Student's full name") }}
+                                {% if form.name.errors %}
+                                <div class="invalid-feedback">{% for e in form.name.errors %}{{ e }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.roll_number.label.text }}</label>
+                                {{ form.roll_number(class="form-control" + (" is-invalid" if form.roll_number.errors
+                                else ""), placeholder="Unique roll number") }}
+                                {% if form.roll_number.errors %}
+                                <div class="invalid-feedback">{% for e in form.roll_number.errors %}{{ e }}{% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Class + DOB -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.class_id.label.text }}</label>
+                                {{ form.class_id(class="form-select" + (" is-invalid" if form.class_id.errors else ""))
+                                }}
+                                {% if form.class_id.errors %}
+                                <div class="invalid-feedback">{% for e in form.class_id.errors %}{{ e }}{% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.date_of_birth.label.text }}</label>
+                                {{ form.date_of_birth(class="form-control" + (" is-invalid" if form.date_of_birth.errors
+                                else "")) }}
+                                {% if form.date_of_birth.errors %}
+                                <div class="invalid-feedback">{% for e in form.date_of_birth.errors %}{{ e }}{% endfor
+                                    %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Phone + Guardian Name -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.phone.label.text }}</label>
+                                {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""),
+                                placeholder="01XXXXXXXXX") }}
+                                {% if form.phone.errors %}
+                                <div class="invalid-feedback">{% for e in form.phone.errors %}{{ e }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.guardian_name.label.text }}</label>
+                                {{ form.guardian_name(class="form-control" + (" is-invalid" if form.guardian_name.errors
+                                else ""), placeholder="Guardian's full name") }}
+                                {% if form.guardian_name.errors %}
+                                <div class="invalid-feedback">{% for e in form.guardian_name.errors %}{{ e }}{% endfor
+                                    %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Guardian Phone + Email -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.guardian_phone.label.text }}</label>
+                                {{ form.guardian_phone(class="form-control" + (" is-invalid" if
+                                form.guardian_phone.errors else ""), placeholder="01XXXXXXXXX") }}
+                                {% if form.guardian_phone.errors %}
+                                <div class="invalid-feedback">{% for e in form.guardian_phone.errors %}{{ e }}{% endfor
+                                    %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">{{ form.email.label.text }} <span
+                                        style="color:var(--neutral-400);font-weight:400">(optional)</span></label>
+                                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
+                                placeholder="student@email.com") }}
+                                {% if form.email.errors %}
+                                <div class="invalid-feedback">{% for e in form.email.errors %}{{ e }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="form-group mb-5">
+                        <label class="form-label">{{ form.address.label.text }} <span
+                                style="color:var(--neutral-400);font-weight:400">(optional)</span></label>
+                        {{ form.address(class="form-control", rows="3", placeholder="Student's complete home address")
+                        }}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div
+                        style="display:flex;align-items:center;justify-content:flex-end;gap:1rem;padding-top:1rem;border-top:1px solid var(--neutral-100);">
+                        <a href="{{ url_for('students') }}" class="btn btn-ghost">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-user-plus"></i> Add Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('addStudentForm')?.addEventListener('submit', function () {
+        const btn = document.getElementById('submitBtn');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

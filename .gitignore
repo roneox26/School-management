@@ -1,0 +1,22 @@
+# Python environments and generated files
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local runtime data
+*.db
+*.sqlite
+*.sqlite3
+*.log
+.env
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Nested project environments and caches
+School-Management/.local/
+School-Management/__pycache__/
+School-Management/*.db
+School-Management/*.log

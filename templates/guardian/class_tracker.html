@@ -1,0 +1,281 @@
+{% extends "guardian/base_guardian.html" %}
+{% block title %}ক্লাস ট্র্যাকার{% endblock %}
+
+{% block extra_css %}
+<style>
+.tracker-header {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 1.25rem;
+  color: #fff;
+  text-align: center;
+}
+.tracker-title { font-size: 1.1rem; font-weight: 800; }
+.tracker-date { font-size: .8rem; opacity: .8; margin-top: .25rem; }
+.tracker-badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 999px; padding: .2rem .75rem; font-size: .72rem; margin-top: .5rem; }
+
+.summary-strip {
+  display: flex; gap: .5rem; padding: .875rem 1rem;
+  background: #fff; border-bottom: 1px solid #e5e7eb;
+  overflow-x: auto; scrollbar-width: none;
+}
+.summary-strip::-webkit-scrollbar { display: none; }
+.summary-pill {
+  display: flex; align-items: center; gap: .4rem;
+  border-radius: 999px; padding: .35rem .875rem; font-size: .78rem;
+  font-weight: 600; white-space: nowrap; border: 2px solid transparent;
+}
+.pill-completed { background:#d1fae5; color:#065f46; border-color:#a7f3d0; }
+.pill-ongoing   { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.pill-cancelled { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+.pill-upcoming  { background:#f3f4f6; color:#374151; border-color:#d1d5db; }
+
+.timeline-wrap { padding: 1rem; }
+.ct-item {
+  display: flex; gap: .875rem; margin-bottom: 1rem;
+  position: relative;
+}
+.ct-item::before {
+  content: '';
+  position: absolute;
+  left: 19px; top: 44px;
+  width: 2px; height: calc(100% + 1rem);
+  background: #e5e7eb;
+}
+.ct-item:last-child::before { display: none; }
+
+.ct-icon {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; flex-shrink: 0; z-index: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.ct-icon.completed { background:#d1fae5; color:#065f46; }
+.ct-icon.ongoing   { background:#fef3c7; color:#d97706; animation: pulse 2s infinite; }
+.ct-icon.cancelled { background:#fee2e2; color:#dc2626; }
+.ct-icon.upcoming  { background:#f3f4f6; color:#9ca3af; }
+
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245,158,11,.0); }
+}
+
+.ct-card {
+  flex: 1; background: #fff; border-radius: 14px;
+  padding: 1rem; box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  border-left: 4px solid #e5e7eb;
+  transition: transform .2s, box-shadow .2s;
+}
+.ct-card.completed { border-left-color: #10b981; }
+.ct-card.ongoing   { border-left-color: #f59e0b; }
+.ct-card.cancelled { border-left-color: #ef4444; opacity: .8; }
+.ct-card.upcoming  { border-left-color: #d1d5db; }
+.ct-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+
+.ct-time { font-size: .72rem; color: #6b7280; font-weight: 600; margin-bottom: .25rem; }
+.ct-subject { font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-bottom: .2rem; }
+.ct-teacher { font-size: .78rem; color: #6b7280; margin-bottom: .5rem; }
+.ct-status-badge {
+  display: inline-block; border-radius: 999px; padding: .2rem .75rem;
+  font-size: .7rem; font-weight: 700;
+}
+.badge-completed { background:#d1fae5; color:#065f46; }
+.badge-ongoing   { background:#fef3c7; color:#92400e; }
+.badge-cancelled { background:#fee2e2; color:#991b1b; }
+.badge-upcoming  { background:#f3f4f6; color:#374151; }
+
+.ct-note { margin-top: .5rem; font-size: .78rem; color: #6b7280; font-style: italic; }
+.ct-actual-time { font-size: .72rem; color: #10b981; font-weight: 600; margin-top: .3rem; }
+
+.refresh-bar {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .625rem; background: #f5f3ff; font-size: .75rem; color: #6366f1;
+  font-weight: 600;
+}
+.refresh-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #6366f1;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Child Switcher -->
+{% if all_students|length > 1 %}
+<div class="gp-child-switcher">
+  <div class="gp-child-switcher-inner">
+    <div class="gp-child-scroll">
+      {% for s in all_students %}
+      <form method="POST" action="{{ url_for('guardian_switch_child') }}" style="display:inline">
+        <input type="hidden" name="student_id" value="{{ s.id }}">
+        <button type="submit" class="gp-child-chip {% if active_student and s.id == active_student.id %}active{% endif %}">
+          <div class="gp-child-avatar">{{ s.name[0] if s.name else '?' }}</div>
+          <div>
+            <div class="gp-child-name">{{ s.name }}</div>
+            <div class="gp-child-class">{{ s.class_name }}</div>
+          </div>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if active_student %}
+<!-- Header -->
+<div class="tracker-header">
+  <div class="tracker-title"><i class="fas fa-broadcast-tower"></i> রিয়েলটাইম ক্লাস ট্র্যাকার</div>
+  <div class="tracker-date">{{ today_label }}</div>
+  <div class="tracker-badge">{{ active_student.name }} • {{ active_student.class_name }}</div>
+</div>
+
+<!-- Auto Refresh Notice -->
+<div class="refresh-bar">
+  <div class="refresh-dot"></div>
+  <span>প্রতি ৩০ সেকেন্ডে আপডেট হচ্ছে</span>
+  <span id="refreshCountdown" style="color:#4f46e5;font-weight:700;"></span>
+</div>
+
+<!-- Summary Counts -->
+<div class="summary-strip" id="summaryStrip">
+  <div class="summary-pill pill-completed">✅ সম্পন্ন: {{ summary.completed }}</div>
+  <div class="summary-pill pill-ongoing">🟠 চলছে: {{ summary.ongoing }}</div>
+  <div class="summary-pill pill-cancelled">❌ হয়নি: {{ summary.cancelled }}</div>
+  <div class="summary-pill pill-upcoming">⚪ আসছে: {{ summary.upcoming }}</div>
+  <div class="summary-pill" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;">📚 মোট: {{ summary.total }}</div>
+</div>
+
+<!-- Timeline -->
+<div class="timeline-wrap" id="timelineWrap">
+{% if today_schedules %}
+  {% for sch in today_schedules %}
+  <div class="ct-item">
+    <div class="ct-icon {{ sch.session_status }}">
+      {% if sch.session_status == 'completed' %}<i class="fas fa-check"></i>
+      {% elif sch.session_status == 'ongoing' %}<i class="fas fa-circle-notch fa-spin"></i>
+      {% elif sch.session_status == 'cancelled' %}<i class="fas fa-times"></i>
+      {% else %}<i class="fas fa-clock"></i>{% endif %}
+    </div>
+    <div class="ct-card {{ sch.session_status }}">
+      <div class="ct-time">{{ sch.start_time }} — {{ sch.end_time }}</div>
+      <div class="ct-subject">{{ sch.subject }}</div>
+      <div class="ct-teacher"><i class="fas fa-chalkboard-teacher"></i> {{ sch.teacher_name }}</div>
+      <span class="ct-status-badge badge-{{ sch.session_status }}">
+        {% if sch.session_status == 'completed' %}✅ সম্পন্ন
+        {% elif sch.session_status == 'ongoing' %}🟠 ক্লাস চলছে
+        {% elif sch.session_status == 'cancelled' %}❌ হয়নি
+        {% else %}⚪ আসছে{% endif %}
+      </span>
+      {% if sch.start_time_actual or sch.end_time_actual %}
+      <div class="ct-actual-time">
+        {% if sch.start_time_actual %}শুরু: {{ sch.start_time_actual }}{% endif %}
+        {% if sch.end_time_actual %} • শেষ: {{ sch.end_time_actual }}{% endif %}
+      </div>
+      {% endif %}
+      {% if sch.session_note %}
+      <div class="ct-note"><i class="fas fa-sticky-note"></i> {{ sch.session_note }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div style="text-align:center;padding:3rem 1rem;color:#9ca3af;">
+    <i class="fas fa-calendar-times" style="font-size:3rem;margin-bottom:1rem;display:block;opacity:.3;"></i>
+    <div style="font-weight:600;font-size:.95rem;">আজকে কোনো ক্লাস নেই</div>
+    <div style="font-size:.8rem;margin-top:.5rem;">ছুটির দিন অথবা রুটিন সেট করা হয়নি</div>
+  </div>
+{% endif %}
+</div>
+
+{% else %}
+<div style="text-align:center;padding:3rem 1rem;color:#9ca3af;">
+  <i class="fas fa-user-slash" style="font-size:3rem;display:block;margin-bottom:1rem;opacity:.3;"></i>
+  <div style="font-weight:600;">শিক্ষার্থী নির্বাচন করা হয়নি</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const REFRESH_INTERVAL = 30; // seconds
+let countdown = REFRESH_INTERVAL;
+
+function updateCountdown() {
+  const el = document.getElementById('refreshCountdown');
+  if (el) el.textContent = `(${countdown}s)`;
+  countdown--;
+  if (countdown < 0) {
+    countdown = REFRESH_INTERVAL;
+    fetchClassData();
+  }
+}
+
+async function fetchClassData() {
+  try {
+    const res = await fetch('/api/guardian/class_tracker_data');
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    // Update summary
+    const strip = document.getElementById('summaryStrip');
+    if (strip && data.summary) {
+      strip.innerHTML = `
+        <div class="summary-pill pill-completed">✅ সম্পন্ন: ${data.summary.completed}</div>
+        <div class="summary-pill pill-ongoing">🟠 চলছে: ${data.summary.ongoing}</div>
+        <div class="summary-pill pill-cancelled">❌ হয়নি: ${data.summary.cancelled}</div>
+        <div class="summary-pill pill-upcoming">⚪ আসছে: ${data.summary.upcoming}</div>
+        <div class="summary-pill" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;">📚 মোট: ${data.summary.total}</div>
+      `;
+    }
+
+    // Update timeline
+    const wrap = document.getElementById('timelineWrap');
+    if (wrap && data.schedules) {
+      const statusLabels = {
+        completed: '✅ সম্পন্ন', ongoing: '🟠 ক্লাস চলছে',
+        cancelled: '❌ হয়নি', upcoming: '⚪ আসছে'
+      };
+      const icons = {
+        completed: '<i class="fas fa-check"></i>',
+        ongoing: '<i class="fas fa-circle-notch fa-spin"></i>',
+        cancelled: '<i class="fas fa-times"></i>',
+        upcoming: '<i class="fas fa-clock"></i>'
+      };
+
+      if (data.schedules.length === 0) {
+        wrap.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:#9ca3af;">
+          <i class="fas fa-calendar-times" style="font-size:3rem;margin-bottom:1rem;display:block;opacity:.3;"></i>
+          <div style="font-weight:600;font-size:.95rem;">আজকে কোনো ক্লাস নেই</div></div>`;
+        return;
+      }
+
+      const last = data.schedules.length - 1;
+      wrap.innerHTML = data.schedules.map((sch, i) => {
+        const status = sch.status || 'upcoming';
+        return `
+          <div class="ct-item">
+            <div class="ct-icon ${status}">${icons[status] || icons.upcoming}</div>
+            <div class="ct-card ${status}">
+              <div class="ct-time">${sch.start_time} — ${sch.end_time}</div>
+              <div class="ct-subject">${sch.subject}</div>
+              <div class="ct-teacher"><i class="fas fa-chalkboard-teacher"></i> ${sch.teacher_name}</div>
+              <span class="ct-status-badge badge-${status}">${statusLabels[status]}</span>
+              ${sch.start_time_actual || sch.end_time_actual ? `
+                <div class="ct-actual-time">
+                  ${sch.start_time_actual ? 'শুরু: '+sch.start_time_actual : ''}
+                  ${sch.end_time_actual ? ' • শেষ: '+sch.end_time_actual : ''}
+                </div>` : ''}
+              ${sch.note ? `<div class="ct-note"><i class="fas fa-sticky-note"></i> ${sch.note}</div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+  } catch(e) { console.error('Tracker update failed', e); }
+}
+
+// Start countdown timer
+setInterval(updateCountdown, 1000);
+updateCountdown();
+</script>
+{% endblock %}

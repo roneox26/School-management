@@ -1,0 +1,223 @@
+
+{% extends "base.html" %}
+
+{% block title %}Edit Student{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-user-edit"></i> Edit Student</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.name.label(class="form-label") }}
+                                    {{ form.name(class="form-control") }}
+                                    {% if form.name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.name.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.roll_number.label(class="form-label") }}
+                                    {{ form.roll_number(class="form-control") }}
+                                    {% if form.roll_number.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.roll_number.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.class_id.label(class="form-label") }}
+                                    {{ form.class_id(class="form-select") }}
+                                    {% if form.class_id.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.class_id.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.date_of_birth.label(class="form-label") }}
+                                    {{ form.date_of_birth(class="form-control", type="date") }}
+                                    {% if form.date_of_birth.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.date_of_birth.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.phone.label(class="form-label") }}
+                                    {{ form.phone(class="form-control", placeholder="01XXXXXXXXX") }}
+                                    {% if form.phone.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.phone.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.email.label(class="form-label") }}
+                                    {{ form.email(class="form-control", placeholder="student@example.com") }}
+                                    {% if form.email.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.email.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.guardian_name.label(class="form-label") }}
+                                    {{ form.guardian_name(class="form-control") }}
+                                    {% if form.guardian_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.guardian_name.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.guardian_phone.label(class="form-label") }}
+                                    {{ form.guardian_phone(class="form-control", placeholder="01XXXXXXXXX") }}
+                                    {% if form.guardian_phone.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.guardian_phone.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.address.label(class="form-label") }}
+                            {{ form.address(class="form-control", rows="3") }}
+                            {% if form.address.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.address.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update Student
+                            </button>
+                            <a href="{{ url_for('view_student', student_id=student.id) }}" class="btn btn-info">
+                                <i class="fas fa-eye"></i> View Student
+                            </a>
+                            <a href="{{ url_for('students') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Students
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Student Information Card -->
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6><i class="fas fa-info-circle"></i> Current Student Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Student ID:</strong><br>
+                            <code>{{ student.id }}</code>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Created:</strong><br>
+                            {{ student.get('created_at', 'N/A')[:10] if student.get('created_at') else 'N/A' }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Status:</strong><br>
+                            <span class="badge bg-{{ 'success' if student.get('is_active', True) else 'danger' }}">
+                                {{ 'Active' if student.get('is_active', True) else 'Inactive' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form validation feedback
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.checkValidity()) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            }
+        });
+    });
+    
+    // Phone number formatting
+    const phoneInputs = document.querySelectorAll('input[name="phone"], input[name="guardian_phone"]');
+    phoneInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, '');
+            if (value.startsWith('88')) {
+                value = value.substring(2);
+            }
+            if (value.length > 11) {
+                value = value.substring(0, 11);
+            }
+            this.value = value;
+        });
+    });
+});
+</script>
+{% endblock %}

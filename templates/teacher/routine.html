@@ -1,0 +1,104 @@
+{% extends "teacher/base_teacher.html" %}
+{% block title %}ক্লাস রুটিন{% endblock %}
+{% block page_title %}আমার ক্লাস রুটিন{% endblock %}
+
+{% block content %}
+<!-- Day Tabs -->
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+  {% for day in days %}
+  {% if routine_by_day.get(day) or day == today_weekday %}
+  <button onclick="showDay('{{ day }}')" id="btn-{{ day }}"
+    class="tp-btn {% if day == today_weekday %}tp-btn-primary{% else %}tp-btn-outline{% endif %}"
+    style="font-size:.8rem;padding:.4rem .875rem;" id-prefix="day-tab">
+    {% if day == 'Saturday' %}শনিবার
+    {% elif day == 'Sunday' %}রবিবার
+    {% elif day == 'Monday' %}সোমবার
+    {% elif day == 'Tuesday' %}মঙ্গলবার
+    {% elif day == 'Wednesday' %}বুধবার
+    {% elif day == 'Thursday' %}বৃহস্পতিবার
+    {% else %}শুক্রবার{% endif %}
+    {% if day == today_weekday %}<span style="font-size:.65rem;opacity:.75;"> (আজ)</span>{% endif %}
+  </button>
+  {% endif %}
+  {% endfor %}
+</div>
+
+{% if routine_by_day %}
+  {% for day, schedules in routine_by_day.items() %}
+  <div id="day-{{ day }}" class="day-panel" style="{{ 'display:block' if day == today_weekday else 'display:none' }}">
+    <div class="tp-card tp-animate">
+      <div class="tp-card-header">
+        <div class="tp-card-title">
+          <i class="fas fa-calendar-day" style="color:var(--tp-primary)"></i>
+          {% if day == 'Saturday' %}শনিবার
+          {% elif day == 'Sunday' %}রবিবার
+          {% elif day == 'Monday' %}সোমবার
+          {% elif day == 'Tuesday' %}মঙ্গলবার
+          {% elif day == 'Wednesday' %}বুধবার
+          {% elif day == 'Thursday' %}বৃহস্পতিবার
+          {% else %}শুক্রবার{% endif %}
+          এর রুটিন
+        </div>
+        <span style="font-size:.75rem;color:var(--tp-muted);">{{ schedules|length }} টি ক্লাস</span>
+      </div>
+      <div class="tp-card-body">
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+          {% for sch in schedules %}
+          <div style="display:flex;align-items:center;gap:1rem;border:1.5px solid var(--tp-border);border-radius:12px;padding:.875rem 1rem;
+            {% if day == today_weekday %}background:rgba(13,148,136,.04);border-color:rgba(13,148,136,.2);{% endif %}">
+            <!-- Time Block -->
+            <div style="text-align:center;min-width:70px;padding:.5rem;background:linear-gradient(135deg,#0d9488,#10b981);border-radius:10px;color:#fff;">
+              <div style="font-size:.7rem;font-weight:800;">{{ sch.start_time }}</div>
+              <div style="font-size:.65rem;opacity:.75;">—</div>
+              <div style="font-size:.7rem;font-weight:800;">{{ sch.end_time }}</div>
+            </div>
+            <!-- Subject / Class Info -->
+            <div style="flex:1;">
+              <div style="font-size:.95rem;font-weight:700;color:var(--tp-text);">{{ sch.subject }}</div>
+              <div style="font-size:.78rem;color:var(--tp-muted);margin-top:.2rem;">
+                <span><i class="fas fa-users"></i> {{ sch.class_name }}</span>
+              </div>
+            </div>
+            {% if day == today_weekday %}
+            <div style="font-size:.7rem;background:#d1fae5;color:#065f46;border-radius:6px;padding:.25rem .5rem;font-weight:700;">আজ</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="tp-card tp-animate">
+  <div class="tp-card-body" style="text-align:center;padding:3rem;">
+    <i class="fas fa-calendar-alt" style="font-size:3rem;color:var(--tp-border);display:block;margin-bottom:1rem;"></i>
+    <div style="font-weight:700;font-size:1rem;color:var(--tp-text);margin-bottom:.5rem;">কোনো রুটিন নেই</div>
+    <div style="color:var(--tp-muted);font-size:.875rem;">Admin প্যানেল থেকে ক্লাস শিডিউল যোগ করুন।</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showDay(day) {
+  document.querySelectorAll('.day-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('[id^="btn-"]').forEach(b => {
+    b.classList.remove('tp-btn-primary');
+    b.classList.add('tp-btn-outline');
+  });
+  const panel = document.getElementById('day-' + day);
+  const btn = document.getElementById('btn-' + day);
+  if (panel) panel.style.display = 'block';
+  if (btn) { btn.classList.remove('tp-btn-outline'); btn.classList.add('tp-btn-primary'); }
+}
+// Show today's panel by default, or first available
+const today = '{{ today_weekday }}';
+const todayPanel = document.getElementById('day-' + today);
+if (!todayPanel || todayPanel.style.display === 'none') {
+  const firstPanel = document.querySelector('.day-panel');
+  if (firstPanel) firstPanel.style.display = 'block';
+}
+</script>
+{% endblock %}
