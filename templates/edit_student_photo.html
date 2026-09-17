@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Student{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Edit Student</h2>
+            
+            <form method="POST" enctype="multipart/form-data" class="mt-4">
+                {{ form.hidden_tag() }}
+                
+                <div class="row">
+                    <div class="col-md-4 text-center mb-4">
+                        <div id="photoPreview" class="mb-3">
+                            {% if has_photo %}
+                                <img id="photoImg" src="/get_photo/student/{{ student.id }}" alt="Student Photo" class="img-fluid rounded" style="max-width: 200px; height: 200px; object-fit: cover;">
+                            {% else %}
+                                <img id="photoImg" src="/static/placeholder.png" alt="No Photo" class="img-fluid rounded" style="max-width: 200px; height: 200px; object-fit: cover;">
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="photoInput" class="form-label">Upload Photo</label>
+                            <input type="file" class="form-control" id="photoInput" name="photo" accept="image/*">
+                            <small class="text-muted">PNG, JPG, JPEG, GIF (Max 16MB)</small>
+                        </div>
+                        
+                        {% if has_photo %}
+                        <button type="button" class="btn btn-danger btn-sm" id="deletePhotoBtn">Delete Photo</button>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            {{ form.name.label }}
+                            {% if form.name.errors %}
+                                {{ form.name(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.name(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.roll_number.label }}
+                            {% if form.roll_number.errors %}
+                                {{ form.roll_number(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.roll_number.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.roll_number(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.class_id.label }}
+                            {% if form.class_id.errors %}
+                                {{ form.class_id(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.class_id.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.class_id(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.phone.label }}
+                            {% if form.phone.errors %}
+                                {{ form.phone(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.phone.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.phone(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.email.label }}
+                            {% if form.email.errors %}
+                                {{ form.email(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.email(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.guardian_name.label }}
+                            {% if form.guardian_name.errors %}
+                                {{ form.guardian_name(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.guardian_name.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.guardian_name(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.guardian_phone.label }}
+                            {% if form.guardian_phone.errors %}
+                                {{ form.guardian_phone(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.guardian_phone.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.guardian_phone(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.date_of_birth.label }}
+                            {% if form.date_of_birth.errors %}
+                                {{ form.date_of_birth(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.date_of_birth.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.date_of_birth(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.address.label }}
+                            {% if form.address.errors %}
+                                {{ form.address(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.address.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.address(class="form-control") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Update Student</button>
+                    <a href="{{ url_for('view_student', student_id=student.id) }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('photoImg').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('deletePhotoBtn')?.addEventListener('click', function() {
+    if (confirm('Are you sure you want to delete this photo?')) {
+        fetch('/delete_photo/student/{{ student.id }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('photoImg').src = '/static/placeholder.png';
+                document.getElementById('deletePhotoBtn').style.display = 'none';
+                alert('Photo deleted successfully');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+});
+</script>
+{% endblock %}

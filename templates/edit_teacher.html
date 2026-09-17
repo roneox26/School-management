@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Teacher{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Edit Teacher</h2>
+            
+            <form method="POST" enctype="multipart/form-data" class="mt-4">
+                {{ form.hidden_tag() }}
+                
+                <div class="row">
+                    <div class="col-md-4 text-center mb-4">
+                        <div id="photoPreview" class="mb-3">
+                            {% if has_photo %}
+                                <img id="photoImg" src="/get_photo/teacher/{{ teacher.id }}" alt="Teacher Photo" class="img-fluid rounded" style="max-width: 200px; height: 200px; object-fit: cover;">
+                            {% else %}
+                                <img id="photoImg" src="/static/placeholder.png" alt="No Photo" class="img-fluid rounded" style="max-width: 200px; height: 200px; object-fit: cover;">
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="photoInput" class="form-label">Upload Photo</label>
+                            <input type="file" class="form-control" id="photoInput" name="photo" accept="image/*">
+                            <small class="text-muted">PNG, JPG, JPEG, GIF (Max 16MB)</small>
+                        </div>
+                        
+                        {% if has_photo %}
+                        <button type="button" class="btn btn-danger btn-sm" id="deletePhotoBtn">Delete Photo</button>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            {{ form.name.label }}
+                            {% if form.name.errors %}
+                                {{ form.name(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.name(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.employee_id.label }}
+                            {% if form.employee_id.errors %}
+                                {{ form.employee_id(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.employee_id.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.employee_id(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.phone.label }}
+                            {% if form.phone.errors %}
+                                {{ form.phone(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.phone.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.phone(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.email.label }}
+                            {% if form.email.errors %}
+                                {{ form.email(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.email(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.subject.label }}
+                            {% if form.subject.errors %}
+                                {{ form.subject(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.subject.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.subject(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.salary.label }}
+                            {% if form.salary.errors %}
+                                {{ form.salary(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.salary.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.salary(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.joining_date.label }}
+                            {% if form.joining_date.errors %}
+                                {{ form.joining_date(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.joining_date.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.joining_date(class="form-control") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Update Teacher</button>
+                    <a href="{{ url_for('teachers') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('photoImg').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('deletePhotoBtn')?.addEventListener('click', function() {
+    if (confirm('Are you sure you want to delete this photo?')) {
+        fetch('/delete_photo/teacher/{{ teacher.id }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('photoImg').src = '/static/placeholder.png';
+                document.getElementById('deletePhotoBtn').style.display = 'none';
+                alert('Photo deleted successfully');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+});
+</script>
+{% endblock %}
