@@ -18,6 +18,7 @@
         font-size: .875rem;
         font-weight: 700;
         flex-shrink: 0;
+        object-fit: cover;
     }
 
     .student-name-cell {
@@ -157,9 +158,18 @@
                 <tr>
                     <td>
                         <div class="student-name-cell">
+                            {% if student.get('id') %}
+                            <img class="student-avatar" src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
+                                alt="{{ student.name }} photo"
+                                onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                            <div class="student-avatar" style="display:none;">
+                                {{ student.name[0].upper() if student.name else 'S' }}
+                            </div>
+                            {% else %}
                             <div class="student-avatar">
                                 {{ student.name[0].upper() if student.name else 'S' }}
                             </div>
+                            {% endif %}
                             <div>
                                 <div class="student-info-main">{{ student.name }}</div>
                                 <div class="student-info-sub">

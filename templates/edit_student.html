@@ -17,13 +17,10 @@
 
                         <div class="row mb-4">
                             <div class="col-md-4 text-center">
-                                {% if has_photo %}
                                 <img id="studentPhoto" src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
                                     alt="Student Photo" class="img-fluid rounded" style="max-width:180px;height:180px;object-fit:cover;">
-                                {% else %}
-                                <div class="border rounded d-flex align-items-center justify-content-center text-muted"
-                                    style="max-width:180px;height:180px;">No photo</div>
-                                {% endif %}
+                                <div id="studentPhotoEmpty" class="border rounded d-flex align-items-center justify-content-center text-muted"
+                                    style="max-width:180px;height:180px;display:none;">No photo</div>
                             </div>
                             <div class="col-md-8">
                                 <label for="studentPhotoInput" class="form-label">Student Photo</label>
@@ -206,6 +203,27 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const photoInput = document.getElementById('studentPhotoInput');
+    const photoPreview = document.getElementById('studentPhoto');
+    const emptyPhoto = document.getElementById('studentPhotoEmpty');
+
+    photoPreview.addEventListener('error', function() {
+        photoPreview.style.display = 'none';
+        emptyPhoto.style.display = 'flex';
+    });
+
+    photoInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(loadEvent) {
+            photoPreview.src = loadEvent.target.result;
+            photoPreview.style.display = 'inline-block';
+            emptyPhoto.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    });
+
     // Add form validation feedback
     const form = document.querySelector('form');
     const inputs = form.querySelectorAll('input, select, textarea');

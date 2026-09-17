@@ -22,6 +22,14 @@
                 <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
             </div>
             <div class="card-body">
+                <div class="text-center mb-4">
+                    <img src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
+                        alt="{{ student.name }} photo" class="rounded-circle shadow-sm"
+                        style="width:150px;height:150px;object-fit:cover;"
+                        onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                    <div class="rounded-circle bg-light text-muted align-items-center justify-content-center mx-auto"
+                        style="width:150px;height:150px;display:none;">No photo</div>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
                         <p><strong>Name:</strong> {{ student.name }}</p>

@@ -16,6 +16,7 @@
         font-size: .9375rem;
         font-weight: 700;
         flex-shrink: 0;
+        object-fit: cover;
     }
 </style>
 {% endblock %}
@@ -73,7 +74,10 @@
                 <tr>
                     <td>
                         <div style="display:flex;align-items:center;gap:.75rem;">
-                            <div class="teacher-avatar">{{ teacher.name[0].upper() if teacher.name else 'T' }}</div>
+                            <img class="teacher-avatar" src="{{ url_for('serve_photo', entity_type='teacher', entity_id=teacher.id) }}"
+                                alt="{{ teacher.name }} photo"
+                                onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                            <div class="teacher-avatar" style="display:none;">{{ teacher.name[0].upper() if teacher.name else 'T' }}</div>
                             <div>
                                 <div style="font-weight:600;color:var(--neutral-900);font-size:.875rem;">{{ teacher.name
                                     }}</div>
