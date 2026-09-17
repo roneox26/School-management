@@ -3,6 +3,8 @@ services:
     name: school-management
     env: python
     plan: free
+    branch: main
+    autoDeploy: true
     buildCommand: pip install -r requirements.txt && python create_admin_on_deploy.py
     startCommand: gunicorn -w 4 -b 0.0.0.0:$PORT app:app
     pythonVersion: 3.11
