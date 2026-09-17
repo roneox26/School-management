@@ -12,8 +12,26 @@
                     <h4><i class="fas fa-user-edit"></i> Edit Student</h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST" novalidate>
+                    <form method="POST" enctype="multipart/form-data" novalidate>
                         {{ form.hidden_tag() }}
+
+                        <div class="row mb-4">
+                            <div class="col-md-4 text-center">
+                                {% if has_photo %}
+                                <img id="studentPhoto" src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
+                                    alt="Student Photo" class="img-fluid rounded" style="max-width:180px;height:180px;object-fit:cover;">
+                                {% else %}
+                                <div class="border rounded d-flex align-items-center justify-content-center text-muted"
+                                    style="max-width:180px;height:180px;">No photo</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                <label for="studentPhotoInput" class="form-label">Student Photo</label>
+                                <input type="file" class="form-control" id="studentPhotoInput" name="photo"
+                                    accept="image/jpeg,image/png,image/gif">
+                                <small class="text-muted">JPG, PNG, or GIF; maximum 16MB. Leave empty to keep the current photo.</small>
+                            </div>
+                        </div>
                         
                         <div class="row">
                             <div class="col-md-6">

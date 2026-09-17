@@ -109,6 +109,10 @@
                     </td>
                     <td>
                         <div style="display:flex;gap:.375rem;">
+                            <a href="{{ url_for('edit_teacher', teacher_id=teacher.id) }}"
+                                class="btn btn-sm btn-ghost" title="Edit Teacher" data-bs-toggle="tooltip">
+                                <i class="fas fa-edit"></i>
+                            </a>
                             <a href="{{ url_for('teacher_schedule', teacher_id=teacher.id) }}"
                                 class="btn btn-sm btn-ghost" title="View Schedule" data-bs-toggle="tooltip">
                                 <i class="fas fa-calendar-alt"></i>

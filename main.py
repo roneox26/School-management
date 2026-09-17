@@ -86,7 +86,7 @@ login_manager.login_view = 'login'
 
 # Simple in-memory cache
 cache = {}
-cache_timeout = 60  # 60 seconds
+cache_timeout = 300  # 5 minutes - increased for better performance
 
 def get_cache_key(collection, data_id=None):
     return f"cache_{collection}_{data_id or 'all'}"
@@ -94,7 +94,7 @@ def get_cache_key(collection, data_id=None):
 def is_cache_valid(cache_key):
     if cache_key not in cache:
         return False
-    return (datetime.now(timezone.utc) - cache[cache_key]['timestamp']).seconds < cache_timeout
+    return (datetime.now(timezone.utc) - cache[cache_key]['timestamp']).total_seconds() < cache_timeout
 
 def set_cache(cache_key, data):
     cache[cache_key] = {
@@ -155,6 +155,17 @@ def init_db():
                         PRIMARY KEY (collection, id)
                     )
                 ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS photos (
+                        entity_type TEXT NOT NULL,
+                        entity_id TEXT NOT NULL,
+                        photo_data BYTEA NOT NULL,
+                        filename TEXT,
+                        mime_type TEXT NOT NULL,
+                        uploaded_at TIMESTAMP NOT NULL,
+                        PRIMARY KEY (entity_type, entity_id)
+                    )
+                ''')
             else:
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS app_data (
@@ -162,6 +173,17 @@ def init_db():
                         id TEXT,
                         data TEXT,
                         PRIMARY KEY (collection, id)
+                    )
+                ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS photos (
+                        entity_type TEXT NOT NULL,
+                        entity_id TEXT NOT NULL,
+                        photo_data BLOB NOT NULL,
+                        filename TEXT,
+                        mime_type TEXT NOT NULL,
+                        uploaded_at TEXT NOT NULL,
+                        PRIMARY KEY (entity_type, entity_id)
                     )
                 ''')
             conn.commit()
@@ -183,6 +205,104 @@ init_db()
 # Clear cache on startup
 clear_cache()
 print("[INIT] Cache cleared on startup")
+
+# ==================== PostgreSQL/SQLite Photo Storage ====================
+ALLOWED_PHOTO_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
+MAX_PHOTO_SIZE = 16 * 1024 * 1024
+
+def save_photo(entity_type, entity_id, photo):
+    """Replace an entity photo with binary data stored in the database."""
+    if not photo or not photo.filename:
+        return False, 'No photo selected'
+    if photo.mimetype not in ALLOWED_PHOTO_TYPES:
+        return False, 'Only JPG, PNG, and GIF photos are supported'
+
+    photo_data = photo.read(MAX_PHOTO_SIZE + 1)
+    if len(photo_data) > MAX_PHOTO_SIZE:
+        return False, 'Photo must be 16MB or smaller'
+
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            if USE_POSTGRES:
+                cursor.execute(
+                    "DELETE FROM photos WHERE entity_type = %s AND entity_id = %s",
+                    (entity_type, entity_id)
+                )
+                cursor.execute(
+                    "INSERT INTO photos (entity_type, entity_id, photo_data, filename, mime_type, uploaded_at) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    (entity_type, entity_id, photo_data, photo.filename, photo.mimetype,
+                     datetime.now(timezone.utc))
+                )
+            else:
+                cursor.execute(
+                    "DELETE FROM photos WHERE entity_type = ? AND entity_id = ?",
+                    (entity_type, entity_id)
+                )
+                cursor.execute(
+                    "INSERT INTO photos (entity_type, entity_id, photo_data, filename, mime_type, uploaded_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (entity_type, entity_id, photo_data, photo.filename, photo.mimetype,
+                     datetime.now(timezone.utc).isoformat())
+                )
+            conn.commit()
+        return True, None
+    except Exception as e:
+        print(f"Error saving {entity_type} photo: {e}")
+        return False, 'Could not save photo'
+
+def get_photo(entity_type, entity_id):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if USE_POSTGRES:
+            cursor.execute(
+                "SELECT photo_data, filename, mime_type FROM photos WHERE entity_type = %s AND entity_id = %s",
+                (entity_type, entity_id)
+            )
+        else:
+            cursor.execute(
+                "SELECT photo_data, filename, mime_type FROM photos WHERE entity_type = ? AND entity_id = ?",
+                (entity_type, entity_id)
+            )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {'data': bytes(row[0]), 'filename': row[1], 'mime_type': row[2]}
+
+def delete_photo(entity_type, entity_id):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if USE_POSTGRES:
+            cursor.execute(
+                "DELETE FROM photos WHERE entity_type = %s AND entity_id = %s",
+                (entity_type, entity_id)
+            )
+        else:
+            cursor.execute(
+                "DELETE FROM photos WHERE entity_type = ? AND entity_id = ?",
+                (entity_type, entity_id)
+            )
+        conn.commit()
+        return cursor.rowcount > 0
+
+@app.route('/get_photo/<entity_type>/<entity_id>')
+@login_required
+def serve_photo(entity_type, entity_id):
+    if entity_type not in {'student', 'teacher'}:
+        return 'Photo not found', 404
+    photo = get_photo(entity_type, entity_id)
+    if not photo:
+        return 'Photo not found', 404
+    return send_file(io.BytesIO(photo['data']), mimetype=photo['mime_type'], download_name=photo['filename'])
+
+@app.route('/delete_photo/<entity_type>/<entity_id>', methods=['POST'])
+@login_required
+def remove_photo(entity_type, entity_id):
+    if entity_type not in {'student', 'teacher'}:
+        return jsonify({'success': False, 'message': 'Invalid entity type'}), 400
+    deleted = delete_photo(entity_type, entity_id)
+    return jsonify({'success': deleted, 'message': 'Photo deleted successfully' if deleted else 'Photo not found'})
 
 # ==================== Database Helpers ====================
 def save_to_db(collection, data):
@@ -218,6 +338,16 @@ def get_from_db(collection, data_id=None):
         cached_data = get_cache(cache_key)
         if cached_data is not None:
             return cached_data
+
+        # Reuse a cached collection for ID lookups to avoid N+1 database calls
+        # on pages that enrich many records with related data.
+        if data_id:
+            cached_collection = get_cache(get_cache_key(collection))
+            if cached_collection is not None:
+                return next(
+                    (item for item in cached_collection if item and item.get('id') == data_id),
+                    None
+                )
 
         data = None
         with get_db_connection() as conn:
@@ -314,6 +444,12 @@ def delete_from_db(collection, data_id):
 def query_db(collection, **filters):
     """Query data with filters (currently client-side to maintain logic)"""
     try:
+        filter_key = json.dumps(filters, sort_keys=True, separators=(',', ':'))
+        cache_key = get_cache_key(f'{collection}_query_{filter_key}')
+        cached_results = get_cache(cache_key)
+        if cached_results is not None:
+            return cached_results
+
         # Note: In a larger app, we would use SQL for filtering.
         # Keeping current logic to ensure existing filters work as expected.
         items = get_from_db(collection)
@@ -330,6 +466,7 @@ def query_db(collection, **filters):
                     break
             if match:
                 filtered_items.append(item)
+        set_cache(cache_key, filtered_items)
         return filtered_items
     except Exception as e:
         print(f"Error querying DB: {e}")
@@ -712,44 +849,37 @@ def logout():
 @login_required
 def dashboard():
     try:
-        # Dashboard statistics with optimized queries
+        # OPTIMIZED: Batch load all data in fewer queries
         students = query_db('student', is_active=True) or []
-        total_students = len(students)
-
         teachers = query_db('teacher', is_active=True) or []
-        total_teachers = len(teachers)
-
         classes = get_from_db('class') or []
+        today = datetime.now().date().isoformat()
+        
+        total_students = len(students)
+        total_teachers = len(teachers)
         total_classes = len(classes)
 
-        # Today's attendance
-        today = datetime.now().date().isoformat()
+        # Batch load attendance data
         today_attendance_records = query_db('attendance', date=today) or []
         today_attendance = len(today_attendance_records)
-        attendance_percentage = 0
-        if total_students > 0:
-            attendance_percentage = round((today_attendance / total_students) * 100, 2)
+        attendance_percentage = round((today_attendance / total_students * 100), 2) if total_students > 0 else 0
 
-        # Teacher attendance today
+        # Teacher attendance
         today_teacher_attendance = query_db('teacher_attendance', date=today) or []
-        teacher_present = len([a for a in today_teacher_attendance if a.get('status') == 'Present'])
-        teacher_attendance_percentage = 0
-        if total_teachers > 0:
-            teacher_attendance_percentage = round((teacher_present / total_teachers) * 100, 2)
+        teacher_present = len([a for a in today_teacher_attendance if a and a.get('status') == 'Present'])
+        teacher_attendance_percentage = round((teacher_present / total_teachers * 100), 2) if total_teachers > 0 else 0
 
-        # Fee collection summary
-        unpaid_fees = query_db('fee', is_paid=False) or []
-        total_fees = sum(fee.get('amount', 0) for fee in unpaid_fees if fee)
+        # Fee collection - single query
+        all_fees = get_from_db('fee') or []
+        unpaid_fees = [f for f in all_fees if f and not f.get('is_paid', False)]
+        paid_fees = [f for f in all_fees if f and f.get('is_paid', False)]
+        total_fees = sum(f.get('amount', 0) for f in unpaid_fees)
+        collected_fees = sum(f.get('amount', 0) for f in paid_fees)
 
-        paid_fees = query_db('fee', is_paid=True) or []
-        collected_fees = sum(fee.get('amount', 0) for fee in paid_fees if fee)
-
-        # Recent SMS logs
+        # SMS logs
         all_sms = get_from_db('sms_log') or []
-        recent_sms = sorted([sms for sms in all_sms if sms], key=lambda x: x.get('sent_at', ''), reverse=True)[:5]
-        
-        # SMS sent today
-        sms_sent_today = len([sms for sms in all_sms if sms and sms.get('sent_at', '').startswith(today)])
+        recent_sms = sorted([s for s in all_sms if s], key=lambda x: x.get('sent_at', ''), reverse=True)[:5]
+        sms_sent_today = len([s for s in all_sms if s and s.get('sent_at', '').startswith(today)])
 
         # Check if mobile view is requested
         user_agent = request.headers.get('User-Agent', '').lower()
@@ -1044,6 +1174,60 @@ def add_teacher():
         return redirect(url_for('teachers'))
 
     return render_template('add_teacher.html', form=form)
+
+@app.route('/edit_teacher/<teacher_id>', methods=['GET', 'POST'])
+@login_required
+def edit_teacher(teacher_id):
+    teacher = get_from_db('teacher', teacher_id)
+    if not teacher:
+        flash('Teacher not found', 'error')
+        return redirect(url_for('teachers'))
+
+    form = TeacherForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        teacher_data = {
+            'name': form.name.data,
+            'employee_id': form.employee_id.data,
+            'phone': form.phone.data,
+            'email': form.email.data or '',
+            'subject': form.subject.data or '',
+            'salary': form.salary.data,
+            'joining_date': form.joining_date.data.isoformat(),
+            'is_active': teacher.get('is_active', True),
+            'created_at': teacher.get('created_at'),
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }
+        if update_in_db('teacher', teacher_id, teacher_data):
+            photo = request.files.get('photo')
+            if photo and photo.filename:
+                saved, error = save_photo('teacher', teacher_id, photo)
+                if not saved:
+                    flash(error, 'error')
+                    return render_template('edit_teacher.html', form=form, teacher=teacher,
+                                           has_photo=get_photo('teacher', teacher_id) is not None)
+            flash('Teacher updated successfully!', 'success')
+            return redirect(url_for('teachers'))
+        flash('Error updating teacher in database', 'error')
+    elif request.method == 'POST':
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'{field}: {error}', 'error')
+
+    if request.method == 'GET':
+        form.name.data = teacher.get('name', '')
+        form.employee_id.data = teacher.get('employee_id', '')
+        form.phone.data = teacher.get('phone', '')
+        form.email.data = teacher.get('email', '')
+        form.subject.data = teacher.get('subject', '')
+        form.salary.data = teacher.get('salary')
+        if teacher.get('joining_date'):
+            try:
+                form.joining_date.data = datetime.fromisoformat(teacher['joining_date']).date()
+            except (TypeError, ValueError):
+                form.joining_date.data = None
+
+    return render_template('edit_teacher.html', form=form, teacher=teacher,
+                           has_photo=get_photo('teacher', teacher_id) is not None)
 
 @app.route('/delete_teacher/<teacher_id>', methods=['POST'])
 @login_required
@@ -3122,6 +3306,13 @@ def edit_student(student_id):
                 }
                 
                 if update_in_db('student', student_id, student_data):
+                    photo = request.files.get('photo')
+                    if photo and photo.filename:
+                        saved, error = save_photo('student', student_id, photo)
+                        if not saved:
+                            flash(error, 'error')
+                            return render_template('edit_student.html', form=form, student=student,
+                                                   has_photo=get_photo('student', student_id) is not None)
                     flash('Student updated successfully!', 'success')
                     return redirect(url_for('view_student', student_id=student_id))
                 else:
@@ -3157,7 +3348,8 @@ def edit_student(student_id):
                 print(f"Date parsing error: {e}")
                 form.date_of_birth.data = None
 
-    return render_template('edit_student.html', form=form, student=student)
+    return render_template('edit_student.html', form=form, student=student,
+                           has_photo=get_photo('student', student_id) is not None)
 
 @app.route('/view_student/<student_id>')
 @login_required
