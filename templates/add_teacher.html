@@ -96,6 +96,21 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            {{ form.date_of_birth.label(class="form-label") }}
+                            {{ form.date_of_birth(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.gender.label(class="form-label") }}
+                            {{ form.gender(class="form-select") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.religion.label(class="form-label") }}
+                            {{ form.religion(class="form-select") }}
+                        </div>
+                    </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <a href="{{ url_for('teachers') }}" class="btn btn-outline-secondary me-2">Cancel</a>

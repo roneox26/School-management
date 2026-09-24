@@ -745,6 +745,8 @@ class StudentForm(FlaskForm):
     guardian_phone = StringField('Guardian Phone', validators=[DataRequired(), Length(max=15)])
     guardian_name = StringField('Guardian Name', validators=[DataRequired(), Length(max=100)])
     date_of_birth = DateField('Date of Birth', validators=[DataRequired()])
+    gender = SelectField('Gender', choices=[('', 'Select Gender'), ('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], validators=[])
+    religion = SelectField('Religion', choices=[('', 'Select Religion'), ('Islam', 'Islam'), ('Hinduism', 'Hinduism'), ('Christianity', 'Christianity'), ('Buddhism', 'Buddhism'), ('Other', 'Other')], validators=[])
     address = TextAreaField('Address')
 
 class SMSTemplateForm(FlaskForm):
@@ -771,6 +773,9 @@ class TeacherForm(FlaskForm):
     subject = StringField('Subject', validators=[Length(max=100)])
     salary = FloatField('Salary')
     joining_date = DateField('Joining Date', validators=[DataRequired()])
+    date_of_birth = DateField('Date of Birth', validators=[])
+    gender = SelectField('Gender', choices=[('', 'Select Gender'), ('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], validators=[])
+    religion = SelectField('Religion', choices=[('', 'Select Religion'), ('Islam', 'Islam'), ('Hinduism', 'Hinduism'), ('Christianity', 'Christianity'), ('Buddhism', 'Buddhism'), ('Other', 'Other')], validators=[])
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1003,6 +1008,8 @@ def add_student():
                 'guardian_phone': form.guardian_phone.data,
                 'guardian_name': form.guardian_name.data,
                 'date_of_birth': form.date_of_birth.data.isoformat(),
+                'gender': form.gender.data or '',
+                'religion': form.religion.data or '',
                 'address': form.address.data,
                 'is_active': True,
                 'created_at': datetime.now(timezone.utc).isoformat()
@@ -1166,6 +1173,9 @@ def add_teacher():
             'subject': form.subject.data,
             'salary': form.salary.data,
             'joining_date': form.joining_date.data.isoformat(),
+            'date_of_birth': form.date_of_birth.data.isoformat() if form.date_of_birth.data else '',
+            'gender': form.gender.data or '',
+            'religion': form.religion.data or '',
             'is_active': True,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
@@ -1193,6 +1203,9 @@ def edit_teacher(teacher_id):
             'subject': form.subject.data or '',
             'salary': form.salary.data,
             'joining_date': form.joining_date.data.isoformat(),
+            'date_of_birth': form.date_of_birth.data.isoformat() if form.date_of_birth.data else '',
+            'gender': form.gender.data or '',
+            'religion': form.religion.data or '',
             'is_active': teacher.get('is_active', True),
             'created_at': teacher.get('created_at'),
             'updated_at': datetime.now(timezone.utc).isoformat()
@@ -1220,11 +1233,18 @@ def edit_teacher(teacher_id):
         form.email.data = teacher.get('email', '')
         form.subject.data = teacher.get('subject', '')
         form.salary.data = teacher.get('salary')
+        form.gender.data = teacher.get('gender', '')
+        form.religion.data = teacher.get('religion', '')
         if teacher.get('joining_date'):
             try:
                 form.joining_date.data = datetime.fromisoformat(teacher['joining_date']).date()
             except (TypeError, ValueError):
                 form.joining_date.data = None
+        if teacher.get('date_of_birth'):
+            try:
+                form.date_of_birth.data = datetime.fromisoformat(teacher['date_of_birth']).date()
+            except (TypeError, ValueError):
+                form.date_of_birth.data = None
 
     return render_template('edit_teacher.html', form=form, teacher=teacher,
                            has_photo=get_photo('teacher', teacher_id) is not None)
@@ -3299,6 +3319,8 @@ def edit_student(student_id):
                     'guardian_phone': form.guardian_phone.data,
                     'guardian_name': form.guardian_name.data,
                     'date_of_birth': form.date_of_birth.data.isoformat() if form.date_of_birth.data else '',
+                    'gender': form.gender.data or '',
+                    'religion': form.religion.data or '',
                     'address': form.address.data or '',
                     'is_active': student.get('is_active', True),
                     'created_at': student.get('created_at'),
@@ -3336,6 +3358,8 @@ def edit_student(student_id):
         form.guardian_phone.data = student.get('guardian_phone', '')
         form.guardian_name.data = student.get('guardian_name', '')
         form.address.data = student.get('address', '')
+        form.gender.data = student.get('gender', '')
+        form.religion.data = student.get('religion', '')
         
         # Handle date of birth
         if student.get('date_of_birth'):

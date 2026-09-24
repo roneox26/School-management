@@ -130,6 +130,22 @@
                                 {{ form.joining_date(class="form-control") }}
                             {% endif %}
                         </div>
+
+                        <div class="mb-3">
+                            {{ form.date_of_birth.label }}
+                            {{ form.date_of_birth(class="form-control") }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.gender.label }}
+                                {{ form.gender(class="form-select") }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.religion.label }}
+                                {{ form.religion(class="form-select") }}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

@@ -138,6 +138,22 @@
                         </div>
                     </div>
 
+                    <!-- Row 5: Gender + Religion -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">{{ form.gender.label.text }} <span style="color:var(--neutral-400);font-weight:400">(optional)</span></label>
+                                {{ form.gender(class="form-select") }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">{{ form.religion.label.text }} <span style="color:var(--neutral-400);font-weight:400">(optional)</span></label>
+                                {{ form.religion(class="form-select") }}
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Address -->
                     <div class="form-group mb-5">
                         <label class="form-label">{{ form.address.label.text }} <span
