@@ -4228,15 +4228,22 @@ def update_period():
     try:
         data = request.json
         period_time = data.get('period_time')
-        duration = data.get('duration', 45)
-        
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        period_name = data.get('period_name', '')
+
+        if not period_time and (start_time and end_time):
+            period_time = f"{start_time}-{end_time}"
+
         if not period_time:
             return jsonify({'success': False, 'message': 'Period time is required'})
-        
+
         # Store period in database
         period_data = {
             'time': period_time,
-            'duration': int(duration),
+            'start_time': start_time or '',
+            'end_time': end_time or '',
+            'period_name': period_name,
             'created_at': datetime.now(timezone.utc).isoformat(),
             'created_by': current_user.id
         }
