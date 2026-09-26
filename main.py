@@ -4006,10 +4006,10 @@ def class_schedule():
 
                 filtered_schedules.append(schedule)
 
-        # Define time slots
-        time_slots = [
+        # Define time slots — merge hardcoded defaults with DB-saved periods
+        default_time_slots = [
             "09:00-09:45",
-            "09:45-10:30", 
+            "09:45-10:30",
             "10:30-11:15",
             "11:15-12:00",
             "12:00-12:45",
@@ -4017,6 +4017,10 @@ def class_schedule():
             "02:45-03:30",
             "03:30-04:15"
         ]
+        saved_periods = get_from_db('period') or []
+        saved_slots = [p.get('time') for p in saved_periods if p.get('time')]
+        all_slots = list(dict.fromkeys(default_time_slots + saved_slots))
+        time_slots = sorted(all_slots)
 
         # Get unique subjects from schedules for filter
         schedule_subjects = list(set([s.get('subject') for s in schedules if s and s.get('subject')]))
@@ -4179,10 +4183,11 @@ def print_schedule(class_id):
             if teacher_data:
                 schedule['teacher_name'] = teacher_data.get('name')
 
-        time_slots = [
-            "09:00-09:45", "09:45-10:30", "10:30-11:15", "11:15-12:00",
-            "12:00-12:45", "02:00-02:45", "02:45-03:30", "03:30-04:15"
-        ]
+        saved_periods = get_from_db('period') or []
+        saved_slots = [p.get('time') for p in saved_periods if p.get('time')]
+        default_slots = ["09:00-09:45", "09:45-10:30", "10:30-11:15", "11:15-12:00",
+                         "12:00-12:45", "02:00-02:45", "02:45-03:30", "03:30-04:15"]
+        time_slots = sorted(list(dict.fromkeys(default_slots + saved_slots)))
 
         return render_template('print_schedule.html',
                              class_data=class_data,
@@ -4212,10 +4217,11 @@ def teacher_schedule(teacher_id):
             if class_data:
                 schedule['class_name'] = f"{class_data.get('name')} - {class_data.get('section')}"
 
-        time_slots = [
-            "09:00-09:45", "09:45-10:30", "10:30-11:15", "11:15-12:00",
-            "12:00-12:45", "02:00-02:45", "02:45-03:30", "03:30-04:15"
-        ]
+        saved_periods = get_from_db('period') or []
+        saved_slots = [p.get('time') for p in saved_periods if p.get('time')]
+        default_slots = ["09:00-09:45", "09:45-10:30", "10:30-11:15", "11:15-12:00",
+                         "12:00-12:45", "02:00-02:45", "02:45-03:30", "03:30-04:15"]
+        time_slots = sorted(list(dict.fromkeys(default_slots + saved_slots)))
 
         return render_template('teacher_schedule.html',
                              teacher=teacher,
