@@ -18,9 +18,27 @@
                 <h5 class="mb-0">Teacher Information</h5>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
                     
+                    <!-- Photo Upload -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 text-center">
+                            <img id="photoPreview" src="#" alt="Preview"
+                                style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px dashed #dee2e6;display:none;">
+                            <div id="photoPlaceholder"
+                                style="width:120px;height:120px;border-radius:8px;border:2px dashed #dee2e6;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#adb5bd;margin:0 auto;">
+                                <i class="fas fa-user-tie fa-2x mb-1"></i>
+                                <small>No photo</small>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">Teacher Photo <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="file" class="form-control" id="photoInput" name="photo" accept="image/jpeg,image/png,image/gif">
+                            <small class="text-muted">JPG, PNG or GIF &mdash; max 16MB</small>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             {{ form.name.label(class="form-label") }}
@@ -123,4 +141,20 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('photoInput')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const img = document.getElementById('photoPreview');
+        const ph = document.getElementById('photoPlaceholder');
+        img.src = ev.target.result;
+        img.style.display = 'inline-block';
+        ph.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+});
+</script>
 {% endblock %}

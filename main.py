@@ -149,6 +149,20 @@ else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'school_management.db')
     print(f"[INIT] Using SQLite database: {DATABASE}")
 
+# Persistent SQLite connection — created once, reused across requests.
+# This eliminates the per-request connection + PRAGMA overhead (~5-10 ms saved each call).
+_sqlite_conn = None
+
+def _make_sqlite_conn():
+    conn = sqlite3.connect(DATABASE, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA cache_size=10000")
+    conn.execute("PRAGMA temp_store=MEMORY")
+    conn.execute("PRAGMA mmap_size=268435456")
+    return conn
+
 def get_db_connection():
     """Get database connection (SQLite or PostgreSQL)"""
     if USE_POSTGRES:
@@ -156,15 +170,16 @@ def get_db_connection():
         conn = psycopg2.connect(DATABASE_URL)
         return conn
     else:
-        conn = sqlite3.connect(DATABASE, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        # Performance PRAGMAs — WAL mode allows concurrent reads without blocking
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
-        conn.execute("PRAGMA cache_size=10000")   # ~40 MB page cache
-        conn.execute("PRAGMA temp_store=MEMORY")
-        conn.execute("PRAGMA mmap_size=268435456") # 256 MB memory-mapped I/O
-        return conn
+        global _sqlite_conn
+        if _sqlite_conn is None:
+            _sqlite_conn = _make_sqlite_conn()
+        else:
+            # Test if connection is still alive; reconnect if not
+            try:
+                _sqlite_conn.execute("SELECT 1")
+            except Exception:
+                _sqlite_conn = _make_sqlite_conn()
+        return _sqlite_conn
 
 def init_db():
     """Initialize database with appropriate schema"""
@@ -361,8 +376,11 @@ def save_to_db(collection, data):
                     (collection, data_id, json.dumps(data))
                 )
             conn.commit()
-            
-        clear_cache(collection)
+        
+        # Only clear specific collection cache, not all
+        keys_to_remove = [k for k in cache.keys() if k.startswith(f"cache_{collection}")]
+        for key in keys_to_remove:
+            del cache[key]
         return data_id
     except Exception as e:
         print(f"Error saving to DB: {e}")
@@ -447,8 +465,11 @@ def update_in_db(collection, data_id, data):
                     (json.dumps(data), collection, data_id)
                 )
             conn.commit()
-            
-        clear_cache(collection)
+        
+        # Only clear specific collection cache
+        keys_to_remove = [k for k in cache.keys() if k.startswith(f"cache_{collection}")]
+        for key in keys_to_remove:
+            del cache[key]
         return True
     except Exception as e:
         print(f"Error updating in DB: {e}")
@@ -471,7 +492,10 @@ def delete_from_db(collection, data_id):
                 )
             conn.commit()
             if cursor.rowcount > 0:
-                clear_cache(collection)
+                # Only clear specific collection cache
+                keys_to_remove = [k for k in cache.keys() if k.startswith(f"cache_{collection}")]
+                for key in keys_to_remove:
+                    del cache[key]
                 return True
         return False
     except Exception as e:
@@ -544,30 +568,10 @@ class Admin(UserMixin):
 
     @staticmethod
     def find_by_username(username):
-        print(f"[ADMIN_LOOKUP] Finding admin with username: '{username}' (type: {type(username).__name__})")
-        
-        # Method 1: Try query_db with filter
+        # Direct query with filter - single DB call
         admins = query_db('admin', username=username)
-        print(f"[ADMIN_LOOKUP] query_db returned: {len(admins) if isinstance(admins, list) else 'not a list'} results")
-        
         if admins and len(admins) > 0:
-            print(f"[ADMIN_LOOKUP] Found via query_db: {admins[0].get('username')}")
             return Admin(admins[0])
-        
-        # Method 2: Fallback - get all admins and search manually
-        print(f"[ADMIN_LOOKUP] Fallback: getting all admins from database")
-        all_admins = get_from_db('admin')
-        print(f"[ADMIN_LOOKUP] All admins count: {len(all_admins) if isinstance(all_admins, list) else 0}")
-        
-        if isinstance(all_admins, list) and len(all_admins) > 0:
-            for admin_data in all_admins:
-                if admin_data and admin_data.get('username') == username:
-                    print(f"[ADMIN_LOOKUP] Found via fallback search: {admin_data.get('username')}")
-                    return Admin(admin_data)
-                elif admin_data:
-                    print(f"[ADMIN_LOOKUP] Checking admin: '{admin_data.get('username')}' vs '{username}' - Match: {admin_data.get('username') == username}")
-        
-        print(f"[ADMIN_LOOKUP] Admin with username '{username}' not found")
         return None
 
     @staticmethod
@@ -814,15 +818,28 @@ class TeacherForm(FlaskForm):
     gender = SelectField('Gender', choices=[('', 'Select Gender'), ('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], validators=[])
     religion = SelectField('Religion', choices=[('', 'Select Religion'), ('Islam', 'Islam'), ('Hinduism', 'Hinduism'), ('Christianity', 'Christianity'), ('Buddhism', 'Buddhism'), ('Other', 'Other')], validators=[])
 
+# Per-process user object cache — avoids a DB round-trip on every request.
+_user_cache = {}
+_USER_CACHE_TTL = 300  # 5 minutes
+
+def _get_cached_user(user_id, loader_fn):
+    entry = _user_cache.get(user_id)
+    if entry and (time.time() - entry['ts']) < _USER_CACHE_TTL:
+        return entry['user']
+    user = loader_fn(user_id)
+    if user:
+        _user_cache[user_id] = {'user': user, 'ts': time.time()}
+    return user
+
 @login_manager.user_loader
 def load_user(user_id):
     """Load user by prefixed ID supporting 3 roles"""
     if user_id.startswith('teacher_'):
-        return TeacherUser.find_by_id(user_id)
+        return _get_cached_user(user_id, TeacherUser.find_by_id)
     elif user_id.startswith('guardian_'):
-        return GuardianUser.find_by_id(user_id)
+        return _get_cached_user(user_id, GuardianUser.find_by_id)
     else:
-        return Admin.find_by_id(user_id)
+        return _get_cached_user(user_id, Admin.find_by_id)
 
 # Routes
 @app.route('/')
@@ -851,7 +868,6 @@ def login():
     role = request.args.get('role', request.form.get('role', 'admin'))
 
     if form.validate_on_submit():
-        clear_cache()
         username = form.username.data
         password = form.password.data
         role = request.form.get('role', 'admin')
@@ -884,6 +900,7 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
+    _user_cache.pop(current_user.get_id(), None)
     logout_user()
     return redirect(url_for('login'))
 
@@ -987,12 +1004,18 @@ def students():
 
     # Get all students
     all_students = get_from_db('student')
-
-    # Filter students
-    filtered_students = []
-    classes = get_from_db('class')
+    
+    # Cache classes
+    cache_key = 'classes_list_all'
+    classes = get_cache(cache_key)
+    if classes is None:
+        classes = get_from_db('class')
+        set_cache(cache_key, classes)
+    
     classes_map = {c.get('id'): c for c in classes if c}
 
+    # Filter students efficiently
+    filtered_students = []
     for student in all_students:
         # Apply filters
         if search and search.lower() not in student.get('name', '').lower() and search not in student.get('roll_number', ''):
@@ -1025,17 +1048,21 @@ def students():
 def add_student():
     form = StudentForm()
 
-    # Get all classes and add a default empty option
-    classes = get_from_db('class')
+    # Cache classes for 5 minutes to avoid repeated DB calls
+    cache_key = 'classes_list_all'
+    classes = get_cache(cache_key)
+    if classes is None:
+        classes = get_from_db('class')
+        set_cache(cache_key, classes)
+    
     form.class_id.choices = [('', 'Select a Class')] + [(c.get('id'), f"{c.get('name')} - {c.get('section')}") for c in classes]
 
     if form.validate_on_submit():
-        # Check if class_id is valid
         if not form.class_id.data:
             flash('Please select a valid class', 'error')
             return render_template('add_student.html', form=form)
 
-        # Check if roll number already exists
+        # Check if roll number already exists - use cached data
         existing_students = query_db('student', roll_number=form.roll_number.data)
         if existing_students:
             flash('Roll number already exists. Please use a different roll number.', 'error')
@@ -1057,9 +1084,16 @@ def add_student():
                 'is_active': True,
                 'created_at': datetime.now(timezone.utc).isoformat()
             }
-            save_to_db('student', student_data)
-            flash('Student added successfully!', 'success')
-            return redirect(url_for('students'))
+            student_id = save_to_db('student', student_data)
+            if student_id:
+                photo = request.files.get('photo')
+                if photo and photo.filename:
+                    saved, error = save_photo('student', student_id, photo)
+                    if not saved:
+                        flash(error, 'warning')
+                flash('Student added successfully!', 'success')
+                return redirect(url_for('students'))
+            flash('Error saving student to database.', 'error')
         except Exception as e:
             flash('Error adding student. Please try again.', 'error')
 
@@ -1068,8 +1102,19 @@ def add_student():
 @app.route('/classes')
 @login_required
 def classes():
-    classes = get_from_db('class')
-    teachers = query_db('teacher', is_active=True)
+    # Cache classes and teachers
+    cache_key_classes = 'classes_list_all'
+    cache_key_teachers = 'teachers_list_active'
+    
+    classes = get_cache(cache_key_classes)
+    if classes is None:
+        classes = get_from_db('class')
+        set_cache(cache_key_classes, classes)
+    
+    teachers = get_cache(cache_key_teachers)
+    if teachers is None:
+        teachers = query_db('teacher', is_active=True)
+        set_cache(cache_key_teachers, teachers)
 
     all_students_list = get_from_db('student') or []
     teachers_map = {t.get('id'): t for t in teachers if t}
@@ -1090,7 +1135,14 @@ def classes():
 @login_required
 def add_class():
     form = ClassForm()
-    teachers = query_db('teacher', is_active=True)
+    
+    # Cache teachers list
+    cache_key = 'teachers_list_active'
+    teachers = get_cache(cache_key)
+    if teachers is None:
+        teachers = query_db('teacher', is_active=True)
+        set_cache(cache_key, teachers)
+    
     form.teacher_id.choices = [('', 'Select Teacher')] + [(t.get('id'), t.get('name')) for t in teachers]
 
     if form.validate_on_submit():
@@ -1187,7 +1239,12 @@ def transfer_students(class_id):
 @app.route('/teachers')
 @login_required
 def teachers():
-    teachers = query_db('teacher', is_active=True)
+    # Cache teachers list
+    cache_key = 'teachers_list_active'
+    teachers = get_cache(cache_key)
+    if teachers is None:
+        teachers = query_db('teacher', is_active=True)
+        set_cache(cache_key, teachers)
 
     # Create a copy of teachers data and convert date strings to datetime objects for template
     teachers_display = []
@@ -1223,9 +1280,21 @@ def add_teacher():
             'is_active': True,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
-        save_to_db('teacher', teacher_data)
-        flash('Teacher added successfully!', 'success')
-        return redirect(url_for('teachers'))
+        teacher_id = save_to_db('teacher', teacher_data)
+        if teacher_id:
+            # Clear teachers cache
+            keys_to_remove = [k for k in cache.keys() if 'teachers' in k]
+            for key in keys_to_remove:
+                del cache[key]
+            
+            photo = request.files.get('photo')
+            if photo and photo.filename:
+                saved, error = save_photo('teacher', teacher_id, photo)
+                if not saved:
+                    flash(error, 'warning')
+            flash('Teacher added successfully!', 'success')
+            return redirect(url_for('teachers'))
+        flash('Error saving teacher to database.', 'error')
 
     return render_template('add_teacher.html', form=form)
 
@@ -4149,6 +4218,32 @@ def teacher_schedule(teacher_id):
         print(f"Teacher schedule error: {e}")
         flash('Error loading teacher schedule.', 'error')
         return redirect(url_for('teachers'))
+
+@app.route('/update_period', methods=['POST'])
+@login_required
+def update_period():
+    """Update or add a period to the schedule"""
+    try:
+        data = request.json
+        period_time = data.get('period_time')
+        duration = data.get('duration', 45)
+        
+        if not period_time:
+            return jsonify({'success': False, 'message': 'Period time is required'})
+        
+        # Store period in database
+        period_data = {
+            'time': period_time,
+            'duration': int(duration),
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'created_by': current_user.id
+        }
+        
+        save_to_db('period', period_data)
+        return jsonify({'success': True, 'message': 'Period updated successfully'})
+    except Exception as e:
+        print(f"Update period error: {e}")
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/manage_subjects')
 @login_required

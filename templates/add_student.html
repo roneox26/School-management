@@ -33,8 +33,28 @@
                 </div>
             </div>
             <div class="card-body">
-                <form method="POST" novalidate id="addStudentForm">
+                <form method="POST" enctype="multipart/form-data" novalidate id="addStudentForm">
                     {{ form.hidden_tag() }}
+
+                    <!-- Photo Upload -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-3 text-center">
+                            <img id="photoPreview" src="#" alt="Preview"
+                                style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px dashed var(--neutral-200);display:none;">
+                            <div id="photoPlaceholder"
+                                style="width:120px;height:120px;border-radius:8px;border:2px dashed var(--neutral-200);display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--neutral-400);margin:0 auto;">
+                                <i class="fas fa-user fa-2x mb-1"></i>
+                                <small>No photo</small>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="form-group">
+                                <label class="form-label">Student Photo <span style="color:var(--neutral-400);font-weight:400">(optional)</span></label>
+                                <input type="file" class="form-control" id="photoInput" name="photo" accept="image/jpeg,image/png,image/gif">
+                                <small class="text-muted">JPG, PNG or GIF — max 16MB</small>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Row 1: Name + Roll -->
                     <div class="row g-4 mb-4">
@@ -179,6 +199,20 @@
 </div>
 
 <script>
+    document.getElementById('photoInput')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const img = document.getElementById('photoPreview');
+            const ph = document.getElementById('photoPlaceholder');
+            img.src = ev.target.result;
+            img.style.display = 'inline-block';
+            ph.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    });
+
     document.getElementById('addStudentForm')?.addEventListener('submit', function () {
         const btn = document.getElementById('submitBtn');
         if (btn) {
