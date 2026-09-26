@@ -38,12 +38,12 @@
                 <label class="form-label">Day of Week</label>
                 <select name="day_filter" class="form-select" onchange="this.form.submit()">
                     <option value="">All Days</option>
-                    <option value="Monday" {% if selected_day == 'Monday' %}selected{% endif %}>Monday</option>
-                    <option value="Tuesday" {% if selected_day == 'Tuesday' %}selected{% endif %}>Tuesday</option>
-                    <option value="Wednesday" {% if selected_day == 'Wednesday' %}selected{% endif %}>Wednesday</option>
-                    <option value="Thursday" {% if selected_day == 'Thursday' %}selected{% endif %}>Thursday</option>
-                    <option value="Friday" {% if selected_day == 'Friday' %}selected{% endif %}>Friday</option>
-                    <option value="Saturday" {% if selected_day == 'Saturday' %}selected{% endif %}>Saturday</option>
+                    <option value="Monday" {% if selected_day == 'Monday' %}selected{% endif %}>Monday (Mon.)</option>
+                    <option value="Tuesday" {% if selected_day == 'Tuesday' %}selected{% endif %}>Tuesday (Tue.)</option>
+                    <option value="Wednesday" {% if selected_day == 'Wednesday' %}selected{% endif %}>Wednesday (Wed.)</option>
+                    <option value="Thursday" {% if selected_day == 'Thursday' %}selected{% endif %}>Thursday (Thu.)</option>
+                    <option value="Saturday" {% if selected_day == 'Saturday' %}selected{% endif %}>Saturday (Sat.)</option>
+                    <option value="Sunday" {% if selected_day == 'Sunday' %}selected{% endif %}>Sunday</option>
                 </select>
             </div>
             <div class="col-md-4">
@@ -98,12 +98,12 @@
                 <thead class="table-dark">
                     <tr>
                         <th style="width: 120px;">Period <button class="btn btn-sm btn-light" onclick="addPeriodModal()" title="Add Period"><i class="fas fa-plus"></i></button></th>
-                        <th>Monday</th>
-                        <th>Tuesday</th>
-                        <th>Wednesday</th>
-                        <th>Thursday</th>
-                        <th>Friday</th>
-                        <th>Saturday</th>
+                        <th>Mon.</th>
+                        <th>Tue.</th>
+                        <th>Wed.</th>
+                        <th>Thu.</th>
+                        <th>Sat.</th>
+                        <th>Sun.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -117,7 +117,7 @@
                                 </button>
                             </div>
                         </td>
-                        {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                        {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday', 'Sunday'] %}
                         <td>
                             {% set schedule_found = false %}
                             {% for schedule in schedules %}
@@ -172,7 +172,7 @@
                     <strong>Total Periods:</strong> {{ class_schedules|length }}
                 </p>
                 <div class="mb-3">
-                    {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                    {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday', 'Sunday'] %}
                     {% set day_schedules = class_schedules|selectattr('day_of_week', 'equalto', day)|list %}
                     <small class="d-block">{{ day }}: {{ day_schedules|length }} periods</small>
                     {% endfor %}
@@ -303,12 +303,12 @@
                             <label class="form-label">Day</label>
                             <select name="day_of_week" class="form-select" required>
                                 <option value="">Select Day</option>
-                                <option value="Monday">Monday</option>
-                                <option value="Tuesday">Tuesday</option>
-                                <option value="Wednesday">Wednesday</option>
-                                <option value="Thursday">Thursday</option>
-                                <option value="Friday">Friday</option>
-                                <option value="Saturday">Saturday</option>
+                                <option value="Monday">Monday (Mon.)</option>
+                                <option value="Tuesday">Tuesday (Tue.)</option>
+                                <option value="Wednesday">Wednesday (Wed.)</option>
+                                <option value="Thursday">Thursday (Thu.)</option>
+                                <option value="Saturday">Saturday (Sat.)</option>
+                                <option value="Sunday">Sunday</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">

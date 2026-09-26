@@ -4016,6 +4016,8 @@ def class_schedule():
         # Get unique subjects from schedules for filter
         schedule_subjects = list(set([s.get('subject') for s in schedules if s and s.get('subject')]))
 
+        VALID_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday', 'Sunday']
+
         return render_template('class_schedule.html',
                              classes=classes,
                              teachers=teachers,
