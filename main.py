@@ -1048,14 +1048,16 @@ def students():
 def add_student():
     form = StudentForm()
 
-    # Cache classes for 5 minutes to avoid repeated DB calls
     cache_key = 'classes_list_all'
     classes = get_cache(cache_key)
     if classes is None:
-        classes = get_from_db('class')
+        classes = get_from_db('class') or []
         set_cache(cache_key, classes)
-    
-    form.class_id.choices = [('', 'Select a Class')] + [(c.get('id'), f"{c.get('name')} - {c.get('section')}") for c in classes]
+
+    form.class_id.choices = [('', 'Select a Class')] + [(c.get('id'), f"{c.get('name')} - {c.get('section')}") for c in classes if c]
+
+    if request.method == 'GET':
+        return render_template('add_student.html', form=form, classes=classes)
 
     if form.validate_on_submit():
         if not form.class_id.data:
@@ -1264,6 +1266,9 @@ def teachers():
 @login_required
 def add_teacher():
     form = TeacherForm()
+
+    if request.method == 'GET':
+        return render_template('add_teacher.html', form=form)
 
     if form.validate_on_submit():
         teacher_data = {
