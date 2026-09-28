@@ -119,10 +119,10 @@
                         </td>
                         {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday', 'Sunday'] %}
                         <td>
-                            {% set schedule_found = false %}
+                            {% set ns = namespace(schedule_found=false) %}
                             {% for schedule in schedules %}
                                 {% if schedule.class_id == selected_class and schedule.day_of_week == day and schedule.time_slot == time_slot %}
-                                    {% set schedule_found = true %}
+                                    {% set ns.schedule_found = true %}
                                     <div class="schedule-item p-2 rounded border" style="background-color: {{ schedule.subject_color }}; border-color: {{ schedule.subject_color }}!important;">
                                         <div class="fw-bold text-white">{{ schedule.subject }}</div>
                                         <small class="text-white opacity-75">{{ schedule.teacher_name or 'No Teacher' }}</small>
@@ -140,7 +140,7 @@
                                     </div>
                                 {% endif %}
                             {% endfor %}
-                            {% if not schedule_found %}
+                            {% if not ns.schedule_found %}
                                 <button class="btn btn-outline-secondary btn-sm w-100" onclick="addQuickSchedule('{{ day }}', '{{ time_slot }}', '{{ selected_class }}')">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
