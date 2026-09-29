@@ -3993,9 +3993,11 @@ def class_schedule():
                     continue
 
                 # Add teacher information
-                teacher_data = get_from_db('teacher', schedule.get('teacher_id'))
-                if teacher_data:
-                    schedule['teacher_name'] = teacher_data.get('name')
+                teacher_id = schedule.get('teacher_id')
+                if teacher_id:
+                    teacher_data = get_from_db('teacher', teacher_id)
+                    if teacher_data and isinstance(teacher_data, dict):
+                        schedule['teacher_name'] = teacher_data.get('name')
 
                 # Add subject color
                 subject_data = next((s for s in subjects if s.get('name') == schedule.get('subject')), None)
@@ -4179,9 +4181,11 @@ def print_schedule(class_id):
         
         # Add teacher information
         for schedule in schedules:
-            teacher_data = get_from_db('teacher', schedule.get('teacher_id'))
-            if teacher_data:
-                schedule['teacher_name'] = teacher_data.get('name')
+            teacher_id = schedule.get('teacher_id')
+            if teacher_id:
+                teacher_data = get_from_db('teacher', teacher_id)
+                if teacher_data and isinstance(teacher_data, dict):
+                    schedule['teacher_name'] = teacher_data.get('name')
 
         saved_periods = get_from_db('period') or []
         saved_slots = [p.get('time') for p in saved_periods if p.get('time')]
@@ -4738,13 +4742,17 @@ def admin_homework_overview():
     """Show all homework assignments with class and teacher context."""
     homeworks = get_from_db('homework') or []
     for homework in homeworks:
-        class_data = get_from_db('class', homework.get('class_id'))
-        teacher = get_from_db('teacher', homework.get('teacher_id'))
+        class_id = homework.get('class_id')
+        class_data = get_from_db('class', class_id) if class_id else None
+        
+        teacher_id = homework.get('teacher_id')
+        teacher = get_from_db('teacher', teacher_id) if teacher_id else None
+
         homework['class_name'] = (
             f"{class_data.get('name')} {class_data.get('section')}"
-            if class_data else 'N/A'
+            if isinstance(class_data, dict) else 'N/A'
         )
-        homework['teacher_name'] = teacher.get('name', 'N/A') if teacher else 'N/A'
+        homework['teacher_name'] = teacher.get('name', 'N/A') if isinstance(teacher, dict) else 'N/A'
     homeworks.sort(key=lambda item: item.get('created_at', ''), reverse=True)
     return render_template('admin/homework_overview.html', homeworks=homeworks)
 
@@ -5384,8 +5392,9 @@ def guardian_class_tracker():
                 sch['end_time_actual'] = ''
 
             # Get teacher name
-            teacher = get_from_db('teacher', sch.get('teacher_id'))
-            sch['teacher_name'] = teacher.get('name', 'N/A') if teacher else 'N/A'
+            teacher_id = sch.get('teacher_id')
+            teacher = get_from_db('teacher', teacher_id) if teacher_id else None
+            sch['teacher_name'] = teacher.get('name', 'N/A') if isinstance(teacher, dict) else 'N/A'
 
         # Summary counts
         completed = len([s for s in today_schedules if s.get('session_status') == 'completed'])
