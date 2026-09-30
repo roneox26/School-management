@@ -159,6 +159,27 @@
                         </div>
 
                         <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.monthly_fee.label(class="form-label") }}
+                                    {{ form.monthly_fee(class="form-control", placeholder="e.g. 500") }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.admission_fee.label(class="form-label") }}
+                                    {{ form.admission_fee(class="form-control", placeholder="e.g. 1000") }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.exam_fee.label(class="form-label") }}
+                                    {{ form.exam_fee(class="form-control", placeholder="e.g. 300") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     {{ form.gender.label(class="form-label") }}

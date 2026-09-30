@@ -43,7 +43,7 @@ from wtforms import (
     StringField,
     TextAreaField,
 )
-from wtforms.validators import DataRequired, Email, Length
+from wtforms.validators import DataRequired, Email, Length, Optional
 try:
     from flask_compress import Compress
     _COMPRESS_AVAILABLE = True
@@ -503,7 +503,7 @@ def delete_from_db(collection, data_id):
         return False
 
 def query_db(collection, **filters):
-    """Query data with filters (currently client-side to maintain logic)"""
+    """Query data with filters using database JSON operations for performance"""
     try:
         filter_key = json.dumps(filters, sort_keys=True, separators=(',', ':'))
         cache_key = get_cache_key(f'{collection}_query_{filter_key}')
@@ -511,13 +511,56 @@ def query_db(collection, **filters):
         if cached_results is not None:
             return cached_results
 
+        filtered_items = []
+        
+        # Fast path for DB-level filtering (especially useful for large collections like attendance)
+        if filters:
+            try:
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    query = "SELECT data FROM app_data WHERE collection = " + ("%s" if USE_POSTGRES else "?")
+                    params = [collection]
+                    
+                    for key, value in filters.items():
+                        if isinstance(value, bool):
+                            if USE_POSTGRES:
+                                query += f" AND CAST(data::json->>'{key}' AS TEXT) = %s"
+                                params.append('true' if value else 'false')
+                            else:
+                                query += f" AND json_extract(data, '$.{key}') = ?"
+                                params.append(1 if value else 0)
+                        elif value is None:
+                            if USE_POSTGRES:
+                                query += f" AND data::json->>'{key}' IS NULL"
+                            else:
+                                query += f" AND json_extract(data, '$.{key}') IS NULL"
+                        else:
+                            if USE_POSTGRES:
+                                query += f" AND CAST(data::json->>'{key}' AS TEXT) = %s"
+                            else:
+                                query += f" AND CAST(json_extract(data, '$.{key}') AS TEXT) = ?"
+                            params.append(str(value))
+                        
+                    cursor.execute(query, tuple(params))
+                    rows = cursor.fetchall()
+                    for row in rows:
+                        item = json.loads(row[0] if USE_POSTGRES else row['data'])
+                        if item:
+                            filtered_items.append(item)
+                            
+                set_cache(cache_key, filtered_items)
+                return filtered_items
+            except Exception as e:
+                print(f"Optimized DB JSON query failed: {e}. Falling back to python filter.")
+                # Fall through to Python-level filtering
+
         # Note: In a larger app, we would use SQL for filtering.
         # Keeping current logic to ensure existing filters work as expected.
         items = get_from_db(collection)
         if not items:
             return []
 
-        filtered_items = []
         for item in items:
             if not item: continue
             match = True
@@ -789,7 +832,9 @@ class StudentForm(FlaskForm):
     gender = SelectField('Gender', choices=[('', 'Select Gender'), ('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], validators=[])
     religion = SelectField('Religion', choices=[('', 'Select Religion'), ('Islam', 'Islam'), ('Hinduism', 'Hinduism'), ('Christianity', 'Christianity'), ('Buddhism', 'Buddhism'), ('Other', 'Other')], validators=[])
     address = TextAreaField('Address')
-
+    monthly_fee = IntegerField('Monthly Fee (Tk)', validators=[Optional()])
+    admission_fee = IntegerField('Admission Fee (Tk)', validators=[Optional()])
+    exam_fee = IntegerField('Exam Fee (Tk)', validators=[Optional()])
 class SMSTemplateForm(FlaskForm):
     name = StringField('Template Name', validators=[DataRequired(), Length(max=100)])
     template_type = SelectField('Type', choices=[
@@ -1083,6 +1128,9 @@ def add_student():
                 'gender': form.gender.data or '',
                 'religion': form.religion.data or '',
                 'address': form.address.data,
+                'monthly_fee': form.monthly_fee.data,
+                'admission_fee': form.admission_fee.data,
+                'exam_fee': form.exam_fee.data,
                 'is_active': True,
                 'created_at': datetime.now(timezone.utc).isoformat()
             }
@@ -1999,12 +2047,15 @@ def analytics_data():
     """Provide analytics data for dashboard charts"""
     try:
         # Weekly attendance data
-        all_attendance = get_from_db('attendance') or []
         total_students = len(query_db('student', is_active=True))
         weekly_attendance = []
+        
+        # We need all attendance for the last 7 days for both charts
+        recent_attendance = []
         for i in range(7):
-            date = (datetime.now() - timedelta(days=i)).date().isoformat()
-            day_attendance = [a for a in all_attendance if a and a.get('date') == date]
+            date_str = (datetime.now() - timedelta(days=i)).date().isoformat()
+            day_attendance = query_db('attendance', date=date_str)
+            recent_attendance.extend(day_attendance)
             present = len([a for a in day_attendance if a.get('status') == 'Present'])
             percentage = round((present / total_students * 100), 1) if total_students > 0 else 0
             weekly_attendance.append(percentage)
@@ -2024,17 +2075,18 @@ def analytics_data():
                         pass
             monthly_fees.append(month_collection)
         
-        # Class-wise performance
+        # Class-wise performance (calculated over the last 7 days instead of all-time to save memory)
         classes = get_from_db('class') or []
         all_students_list = get_from_db('student') or []
         class_performance = []
         for class_item in classes:
             students = [s for s in all_students_list if s and s.get('class_id') == class_item.get('id') and s.get('is_active', True)]
             student_ids = {s.get('id') for s in students}
-            attendance_records = [a for a in all_attendance if a and a.get('student_id') in student_ids]
+            attendance_records = [a for a in recent_attendance if a and a.get('student_id') in student_ids]
             
             if attendance_records:
                 present_count = len([a for a in attendance_records if a.get('status') == 'Present'])
+
                 avg_attendance = round((present_count / len(attendance_records) * 100), 1)
             else:
                 avg_attendance = 0
@@ -2627,7 +2679,6 @@ def attendance_report():
         month_filter = request.args.get('month_filter', datetime.now().strftime('%Y-%m'))
         min_attendance = request.args.get('min_attendance', '')
 
-        attendance = get_from_db('attendance') or []
         classes = get_from_db('class') or []
 
         # Filter students by class if specified
@@ -2642,16 +2693,15 @@ def attendance_report():
         except:
             filter_year, filter_month = datetime.now().year, datetime.now().month
 
-        # Filter attendance by selected month
+        # Get attendance for the selected month by querying each day (to avoid loading all-time history)
         filtered_attendance = []
-        for record in attendance:
-            if record and record.get('date'):
-                try:
-                    record_date = datetime.fromisoformat(record['date'])
-                    if record_date.month == filter_month and record_date.year == filter_year:
-                        filtered_attendance.append(record)
-                except:
-                    pass
+        import calendar
+        num_days = calendar.monthrange(filter_year, filter_month)[1]
+        for day in range(1, num_days + 1):
+            date_str = f"{filter_year}-{filter_month:02d}-{day:02d}"
+            day_records = query_db('attendance', date=date_str)
+            filtered_attendance.extend(day_records)
+
 
         # Calculate attendance statistics
         total_records = len([a for a in filtered_attendance if a])
@@ -3447,6 +3497,9 @@ def edit_student(student_id):
                     'gender': form.gender.data or '',
                     'religion': form.religion.data or '',
                     'address': form.address.data or '',
+                    'monthly_fee': form.monthly_fee.data,
+                    'admission_fee': form.admission_fee.data,
+                    'exam_fee': form.exam_fee.data,
                     'is_active': student.get('is_active', True),
                     'created_at': student.get('created_at'),
                     'updated_at': datetime.now(timezone.utc).isoformat()
@@ -3485,6 +3538,9 @@ def edit_student(student_id):
         form.address.data = student.get('address', '')
         form.gender.data = student.get('gender', '')
         form.religion.data = student.get('religion', '')
+        form.monthly_fee.data = student.get('monthly_fee')
+        form.admission_fee.data = student.get('admission_fee')
+        form.exam_fee.data = student.get('exam_fee')
         
         # Handle date of birth
         if student.get('date_of_birth'):
@@ -3559,13 +3615,7 @@ def can_delete_class(class_id):
                 return False, f"Class has {len(students)} inactive student(s) in records."
 
         # Check attendance records
-        attendance_records = query_db('attendance')
-        class_attendance = []
-        for record in attendance_records:
-            if record:
-                student = get_from_db('student', record.get('student_id'))
-                if student and student.get('class_id') == class_id:
-                    class_attendance.append(record)
+        class_attendance = query_db('attendance', class_id=class_id)
         
         if class_attendance:
             return False, f"Class has {len(class_attendance)} attendance records."
@@ -5274,10 +5324,8 @@ def guardian_dashboard():
         # Attendance this month
         today = datetime.now()
         month_start = today.replace(day=1).date().isoformat()
-        all_attendance = get_from_db('attendance') or []
-        month_attendance = [a for a in all_attendance
-                           if a.get('student_id') == student_id
-                           and a.get('date', '') >= month_start]
+        all_attendance = query_db('attendance', student_id=student_id)
+        month_attendance = [a for a in all_attendance if a and a.get('date', '') >= month_start]
         present_count = len([a for a in month_attendance if a.get('status') == 'Present'])
         total_att = len(month_attendance)
         att_pct = round((present_count / total_att) * 100) if total_att else 0
@@ -5506,10 +5554,8 @@ def guardian_attendance():
 
     month_label = datetime(year, month, 1).strftime('%B %Y')
 
-    all_att = get_from_db('attendance') or []
-    student_att = [a for a in all_att
-                  if a.get('student_id') == active_student.get('id')
-                  and a.get('date', '').startswith(month_param)]
+    student_att = query_db('attendance', student_id=active_student.get('id'))
+    student_att = [a for a in student_att if a and a.get('date', '').startswith(month_param)]
     student_att.sort(key=lambda x: x.get('date', ''))
 
     present_count = len([a for a in student_att if a.get('status') == 'Present'])
@@ -5744,3 +5790,346 @@ if __name__ == '__main__':
     print(f"Running on: http://0.0.0.0:{port}")
     print("="*70 + "\n")
     app.run(host='0.0.0.0', port=port, debug=False)
+
+
+# ==================== TEACHER PORTAL ROUTES ====================
+
+@app.route('/teacher/dashboard')
+@login_required
+@teacher_required
+def teacher_dashboard():
+    \"\"\"Teacher dashboard with their classes and attendance\"\\"
+    try:
+        teacher_profile = current_user.get_teacher_profile()
+        if not teacher_profile:
+            flash('শিক্ষক প্রোফাইল পাওয়া যায়নি।', 'error')
+            return redirect(url_for('role_home'))
+        
+        teacher_id = current_user.teacher_id
+        today = datetime.now().date().isoformat()
+        
+        # Get teacher's classes
+        classes = query_db('class', teacher_id=teacher_id) or []
+        class_ids = {c.get('id') for c in classes}
+        
+        # Get students in teacher's classes
+        all_students = query_db('student', is_active=True) or []
+        teacher_students = [s for s in all_students if s.get('class_id') in class_ids]
+        
+        # Get today's attendance for teacher's students
+        today_attendance = query_db('attendance', date=today) or []
+        teacher_attendance = [a for a in today_attendance if a.get('student_id') in {s.get('id') for s in teacher_students}]
+        
+        present_count = len([a for a in teacher_attendance if a.get('status') == 'Present'])
+        total_students = len(teacher_students)
+        attendance_percentage = round((present_count / total_students * 100), 1) if total_students > 0 else 0
+        
+        # Get teacher's attendance
+        teacher_att = query_db('teacher_attendance', teacher_id=teacher_id, date=today)
+        teacher_status = teacher_att[0].get('status') if teacher_att else 'Not Marked'
+        
+        return render_template('teacher/dashboard.html',
+                             teacher=teacher_profile,
+                             classes=classes,
+                             total_students=total_students,
+                             today_attendance=len(teacher_attendance),
+                             attendance_percentage=attendance_percentage,
+                             teacher_status=teacher_status)
+    except Exception as e:
+        print(f\"Teacher dashboard error: {e}\")
+        flash('ড্যাশবোর্ড লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('role_home'))
+
+@app.route('/teacher/attendance')
+@login_required
+@teacher_required
+def teacher_view_attendance():
+    \"\"\"Teacher view their own attendance records\"\\"
+    try:
+        teacher_id = current_user.teacher_id
+        month_filter = request.args.get('month', datetime.now().strftime('%Y-%m'))
+        
+        # Parse month
+        try:
+            year, month = map(int, month_filter.split('-'))
+        except:
+            year, month = datetime.now().year, datetime.now().month
+        
+        # Get attendance for the month
+        import calendar
+        num_days = calendar.monthrange(year, month)[1]
+        
+        attendance_records = []
+        for day in range(1, num_days + 1):
+            date_str = f\"{year}-{month:02d}-{day:02d}\"
+            records = query_db('teacher_attendance', teacher_id=teacher_id, date=date_str)
+            attendance_records.extend(records)
+        
+        # Calculate statistics
+        total_days = len(attendance_records)
+        present_days = len([a for a in attendance_records if a.get('status') == 'Present'])
+        late_days = len([a for a in attendance_records if a.get('status') == 'Late'])
+        leave_days = len([a for a in attendance_records if a.get('status') == 'Leave'])
+        absent_days = total_days - present_days - late_days - leave_days
+        
+        attendance_percentage = round((present_days / total_days * 100), 1) if total_days > 0 else 0
+        
+        # Sort by date descending
+        attendance_records.sort(key=lambda x: x.get('date', ''), reverse=True)
+        
+        return render_template('teacher/attendance.html',
+                             attendance_records=attendance_records,
+                             total_days=total_days,
+                             present_days=present_days,
+                             late_days=late_days,
+                             leave_days=leave_days,
+                             absent_days=absent_days,
+                             attendance_percentage=attendance_percentage,
+                             month_filter=month_filter)
+    except Exception as e:
+        print(f\"Teacher attendance view error: {e}\")
+        flash('উপস্থিতি রেকর্ড লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('teacher_dashboard'))
+
+@app.route('/teacher/profile')
+@login_required
+@teacher_required
+def teacher_profile():
+    \"\"\"Teacher profile page with photo\"\\"
+    try:
+        teacher_profile = current_user.get_teacher_profile()
+        if not teacher_profile:
+            flash('শিক্ষক প্রোফাইল পাওয়া যায়নি।', 'error')
+            return redirect(url_for('role_home'))
+        
+        teacher_id = current_user.teacher_id
+        has_photo = get_photo('teacher', teacher_id) is not None
+        
+        return render_template('teacher/profile.html',
+                             teacher=teacher_profile,
+                             has_photo=has_photo)
+    except Exception as e:
+        print(f\"Teacher profile error: {e}\")
+        flash('প্রোফাইল লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('teacher_dashboard'))
+
+@app.route('/teacher/update_profile', methods=['POST'])
+@login_required
+@teacher_required
+def teacher_update_profile():
+    \"\"\"Update teacher profile and photo\"\\"
+    try:
+        teacher_id = current_user.teacher_id
+        teacher_data = get_from_db('teacher', teacher_id)
+        
+        if not teacher_data:
+            flash('শিক্ষক পাওয়া যায়নি।', 'error')
+            return redirect(url_for('teacher_profile'))
+        
+        # Update basic info if provided
+        if request.form.get('phone'):
+            teacher_data['phone'] = request.form.get('phone')
+        if request.form.get('email'):
+            teacher_data['email'] = request.form.get('email')
+        
+        teacher_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+        
+        # Handle photo upload
+        photo = request.files.get('photo')
+        if photo and photo.filename:
+            saved, error = save_photo('teacher', teacher_id, photo)
+            if not saved:
+                flash(f'ফটো আপলোড ব্যর্থ: {error}', 'error')
+                return redirect(url_for('teacher_profile'))
+        
+        # Save updated data
+        if update_in_db('teacher', teacher_id, teacher_data):
+            flash('প্রোফাইল সফলভাবে আপডেট হয়েছে।', 'success')
+        else:
+            flash('প্রোফাইল আপডেট করতে সমস্যা হয়েছে।', 'error')
+        
+        return redirect(url_for('teacher_profile'))
+    except Exception as e:
+        print(f\"Teacher profile update error: {e}\")
+        flash('প্রোফাইল আপডেট করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('teacher_profile'))
+
+@app.route('/teacher/results')
+@login_required
+@teacher_required
+def teacher_results():
+    \"\"\"Teacher view results for their classes\"\\"
+    try:
+        teacher_id = current_user.teacher_id
+        class_ids = teacher_class_ids(teacher_id)
+        
+        # Get exams for teacher's classes
+        all_exams = get_from_db('exam') or []
+        teacher_exams = [e for e in all_exams if e.get('class_id') in class_ids]
+        
+        # Add class info
+        classes_map = {c.get('id'): c for c in (get_from_db('class') or []) if c}
+        for exam in teacher_exams:
+            class_data = classes_map.get(exam.get('class_id'))
+            if class_data:
+                exam['class_name'] = f\"{class_data.get('name')} - {class_data.get('section')}\"
+        
+        return render_template('teacher/results.html', exams=teacher_exams)
+    except Exception as e:
+        print(f\"Teacher results error: {e}\")
+        flash('ফলাফল লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('teacher_dashboard'))
+
+# ==================== GUARDIAN PORTAL ROUTES ====================
+
+@app.route('/guardian/dashboard')
+@login_required
+@guardian_required
+def guardian_dashboard():
+    \"\"\"Guardian dashboard\"\\"
+    try:
+        students = current_user.get_all_students()
+        active_student = current_user.get_active_student()
+        
+        if not active_student and students:
+            active_student = students[0]
+            current_user.save_active_student(active_student.get('id'))
+        
+        return render_template('guardian/dashboard.html',
+                             active_student=active_student,
+                             all_students=students)
+    except Exception as e:
+        print(f\"Guardian dashboard error: {e}\")
+        flash('ড্যাশবোর্ড লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('role_home'))
+
+@app.route('/guardian/switch_child', methods=['POST'])
+@login_required
+@guardian_required
+def guardian_switch_child():
+    \"\"\"Switch active student for guardian\"\\"
+    try:
+        student_id = request.form.get('student_id')
+        if student_id in current_user.student_ids:
+            current_user.save_active_student(student_id)
+            flash('শিক্ষার্থী পরিবর্তন করা হয়েছে।', 'success')
+        else:
+            flash('অবৈধ শিক্ষার্থী।', 'error')
+    except Exception as e:
+        flash('শিক্ষার্থী পরিবর্তনে সমস্যা হয়েছে।', 'error')
+    
+    return redirect(request.referrer or url_for('guardian_dashboard'))
+
+@app.route('/guardian/fees')
+@login_required
+@guardian_required
+def guardian_fees():
+    \"\"\"Guardian view fees for their children\"\\"
+    try:
+        active_student = current_user.get_active_student()
+        all_students = current_user.get_all_students()
+        
+        if not active_student:
+            return render_template('guardian/fees.html',
+                                 active_student=None,
+                                 all_students=all_students,
+                                 fees=[],
+                                 total_fee=0,
+                                 paid_fee=0,
+                                 due_fee=0)
+        
+        # Get fees for active student
+        fees = query_db('fee', student_id=active_student.get('id')) or []
+        
+        total_fee = sum(f.get('amount', 0) for f in fees)
+        paid_fee = sum(f.get('amount', 0) for f in fees if f.get('is_paid', False))
+        due_fee = total_fee - paid_fee
+        
+        return render_template('guardian/fees.html',
+                             active_student=active_student,
+                             all_students=all_students,
+                             fees=fees,
+                             total_fee=total_fee,
+                             paid_fee=paid_fee,
+                             due_fee=due_fee)
+    except Exception as e:
+        print(f\"Guardian fees error: {e}\")
+        flash('ফি তথ্য লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('guardian_dashboard'))
+
+@app.route('/guardian/attendance')
+@login_required
+@guardian_required
+def guardian_attendance():
+    \"\"\"Guardian view attendance for their children\"\\"
+    try:
+        active_student = current_user.get_active_student()
+        all_students = current_user.get_all_students()
+        
+        if not active_student:
+            return render_template('guardian/attendance.html',
+                                 active_student=None,
+                                 all_students=all_students,
+                                 attendance=[],
+                                 attendance_percentage=0)
+        
+        # Get attendance for active student
+        attendance = query_db('attendance', student_id=active_student.get('id')) or []
+        
+        # Calculate percentage
+        total_days = len(attendance)
+        present_days = len([a for a in attendance if a.get('status') == 'Present'])
+        attendance_percentage = round((present_days / total_days * 100), 1) if total_days > 0 else 0
+        
+        # Sort by date descending
+        attendance.sort(key=lambda x: x.get('date', ''), reverse=True)
+        
+        return render_template('guardian/attendance.html',
+                             active_student=active_student,
+                             all_students=all_students,
+                             attendance=attendance[:30],  # Last 30 days
+                             attendance_percentage=attendance_percentage)
+    except Exception as e:
+        print(f\"Guardian attendance error: {e}\")
+        flash('উপস্থিতি তথ্য লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('guardian_dashboard'))
+
+@app.route('/guardian/academic')
+@login_required
+@guardian_required
+def guardian_academic():
+    \"\"\"Guardian view academic results for their children\"\\"
+    try:
+        active_student = current_user.get_active_student()
+        all_students = current_user.get_all_students()
+        
+        if not active_student:
+            return render_template('guardian/academic.html',
+                                 active_student=None,
+                                 all_students=all_students,
+                                 results=[])
+        
+        # Get results for active student
+        results = query_db('result', student_id=active_student.get('id')) or []
+        
+        # Add exam info
+        exams_map = {e.get('id'): e for e in (get_from_db('exam') or []) if e}
+        for result in results:
+            exam = exams_map.get(result.get('exam_id'))
+            if exam:
+                result['exam_name'] = exam.get('name')
+                result['subject'] = exam.get('subject')
+                result['total_marks'] = exam.get('total_marks', 100)
+                result['grade'] = calculate_grade(result.get('marks_obtained', 0), exam.get('total_marks', 100))
+        
+        # Sort by date descending
+        results.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return render_template('guardian/academic.html',
+                             active_student=active_student,
+                             all_students=all_students,
+                             results=results)
+    except Exception as e:
+        print(f\"Guardian academic error: {e}\")
+        flash('একাডেমিক তথ্য লোড করতে সমস্যা হয়েছে।', 'error')
+        return redirect(url_for('guardian_dashboard'))
