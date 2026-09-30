@@ -355,7 +355,10 @@ def serve_photo(entity_type, entity_id):
     photo = get_photo(entity_type, entity_id)
     if not photo:
         return 'Photo not found', 404
-    return send_file(io.BytesIO(photo['data']), mimetype=photo['mime_type'], download_name=photo['filename'])
+    response = send_file(io.BytesIO(photo['data']), mimetype=photo['mime_type'], download_name=photo['filename'])
+    response.cache_control.max_age = 2592000  # Cache for 30 days
+    response.cache_control.public = True
+    return response
 
 @app.route('/delete_photo/<entity_type>/<entity_id>', methods=['POST'])
 @login_required
