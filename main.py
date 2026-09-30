@@ -67,7 +67,7 @@ else:
 def from_json_filter(s):
     try:
         return json.loads(s)
-    except:
+    except Exception:
         return []
 
 # Email Configuration
@@ -207,6 +207,15 @@ def init_db():
                         PRIMARY KEY (entity_type, entity_id)
                     )
                 ''')
+                # PostgreSQL performance indexes
+                cursor.execute(
+                    'CREATE INDEX IF NOT EXISTS idx_app_data_collection '
+                    'ON app_data(collection)'
+                )
+                cursor.execute(
+                    'CREATE INDEX IF NOT EXISTS idx_app_data_col_id '
+                    'ON app_data(collection, id)'
+                )
             else:
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS app_data (
@@ -1078,7 +1087,7 @@ def students():
             try:
                 if isinstance(student_copy['date_of_birth'], str):
                     student_copy['date_of_birth'] = datetime.fromisoformat(student_copy['date_of_birth']).date()
-            except:
+            except (ValueError, TypeError):
                 student_copy['date_of_birth'] = None
 
         class_data = classes_map.get(student.get('class_id'))
@@ -2690,17 +2699,14 @@ def attendance_report():
         # Parse month filter
         try:
             filter_year, filter_month = map(int, month_filter.split('-'))
-        except:
+        except (ValueError, TypeError):
             filter_year, filter_month = datetime.now().year, datetime.now().month
 
         # Get attendance for the selected month by querying each day (to avoid loading all-time history)
-        filtered_attendance = []
-        import calendar
-        num_days = calendar.monthrange(filter_year, filter_month)[1]
-        for day in range(1, num_days + 1):
-            date_str = f"{filter_year}-{filter_month:02d}-{day:02d}"
-            day_records = query_db('attendance', date=date_str)
-            filtered_attendance.extend(day_records)
+        # Single query instead of 31 per-day queries (~30x faster)
+        all_attendance = get_from_db('attendance') or []
+        month_prefix = f"{filter_year}-{filter_month:02d}-"
+        filtered_attendance = [a for a in all_attendance if a and a.get('date', '').startswith(month_prefix)]
 
 
         # Calculate attendance statistics
@@ -5281,9 +5287,11 @@ def teacher_routine():
     schedules = get_from_db('schedule') or []
     my_schedules = [s for s in schedules if s.get('teacher_id') == current_user.teacher_id]
 
-    # Enrich with class names
+    # Enrich with class names (pre-load to avoid N+1 queries)
+    all_classes = get_from_db('class') or []
+    classes_map = {c.get('id'): c for c in all_classes if c}
     for s in my_schedules:
-        class_data = get_from_db('class', s.get('class_id'))
+        class_data = classes_map.get(s.get('class_id'))
         s['class_name'] = f"{class_data.get('name')} {class_data.get('section')}" if class_data else 'N/A'
 
     # Group by day
@@ -5626,20 +5634,26 @@ def guardian_academic():
                                active_student=None, all_students=[],
                                homeworks=[], results_data=[], exams=[])
 
+    # Pre-load classes and teachers to avoid N+1 queries
+    all_classes = get_from_db('class') or []
+    classes_map = {c.get('id'): c for c in all_classes if c}
+    all_teachers_list = get_from_db('teacher') or []
+    teachers_map = {t.get('id'): t for t in all_teachers_list if t}
+
     for s in all_students:
-        cd = get_from_db('class', s.get('class_id'))
+        cd = classes_map.get(s.get('class_id'))
         s['class_name'] = f"{cd.get('name')} {cd.get('section')}" if cd else 'N/A'
 
     class_id = active_student.get('class_id')
     student_id = active_student.get('id')
-    class_data = get_from_db('class', class_id)
+    class_data = classes_map.get(class_id)
     active_student['class_name'] = f"{class_data.get('name')} {class_data.get('section')}" if class_data else 'N/A'
 
     # Homework
     all_hw = get_from_db('homework') or []
     class_hw = [h for h in all_hw if h.get('class_id') == class_id and h.get('is_active')]
     for h in class_hw:
-        teacher = get_from_db('teacher', h.get('teacher_id'))
+        teacher = teachers_map.get(h.get('teacher_id'))
         h['teacher_name'] = teacher.get('name', 'N/A') if teacher else 'N/A'
 
     # Exams and results
@@ -5689,8 +5703,10 @@ def guardian_messages():
 
     # Get teacher users for compose
     teacher_users = get_from_db('teacher_user') or []
+    all_teachers_list = get_from_db('teacher') or []
+    teachers_map = {t.get('id'): t for t in all_teachers_list if t}
     for tu in teacher_users:
-        tp = get_from_db('teacher', tu.get('teacher_id'))
+        tp = teachers_map.get(tu.get('teacher_id'))
         tu['display_name'] = tp.get('name', tu.get('username', '')) if tp else tu.get('username', '')
 
     return render_template('guardian/messages.html',
@@ -5791,345 +5807,3 @@ if __name__ == '__main__':
     print("="*70 + "\n")
     app.run(host='0.0.0.0', port=port, debug=False)
 
-
-# ==================== TEACHER PORTAL ROUTES ====================
-
-@app.route('/teacher/dashboard')
-@login_required
-@teacher_required
-def teacher_dashboard():
-    """Teacher dashboard with their classes and attendance"""
-    try:
-        teacher_profile = current_user.get_teacher_profile()
-        if not teacher_profile:
-            flash('শিক্ষক প্রোফাইল পাওয়া যায়নি।', 'error')
-            return redirect(url_for('role_home'))
-        
-        teacher_id = current_user.teacher_id
-        today = datetime.now().date().isoformat()
-        
-        # Get teacher's classes
-        classes = query_db('class', teacher_id=teacher_id) or []
-        class_ids = {c.get('id') for c in classes}
-        
-        # Get students in teacher's classes
-        all_students = query_db('student', is_active=True) or []
-        teacher_students = [s for s in all_students if s.get('class_id') in class_ids]
-        
-        # Get today's attendance for teacher's students
-        today_attendance = query_db('attendance', date=today) or []
-        teacher_attendance = [a for a in today_attendance if a.get('student_id') in {s.get('id') for s in teacher_students}]
-        
-        present_count = len([a for a in teacher_attendance if a.get('status') == 'Present'])
-        total_students = len(teacher_students)
-        attendance_percentage = round((present_count / total_students * 100), 1) if total_students > 0 else 0
-        
-        # Get teacher's attendance
-        teacher_att = query_db('teacher_attendance', teacher_id=teacher_id, date=today)
-        teacher_status = teacher_att[0].get('status') if teacher_att else 'Not Marked'
-        
-        return render_template('teacher/dashboard.html',
-                             teacher=teacher_profile,
-                             classes=classes,
-                             total_students=total_students,
-                             today_attendance=len(teacher_attendance),
-                             attendance_percentage=attendance_percentage,
-                             teacher_status=teacher_status)
-    except Exception as e:
-        print(f\"Teacher dashboard error: {e}\")
-        flash('ড্যাশবোর্ড লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('role_home'))
-
-@app.route('/teacher/attendance')
-@login_required
-@teacher_required
-def teacher_view_attendance():
-    \"\"\"Teacher view their own attendance records\"\\"
-    try:
-        teacher_id = current_user.teacher_id
-        month_filter = request.args.get('month', datetime.now().strftime('%Y-%m'))
-        
-        # Parse month
-        try:
-            year, month = map(int, month_filter.split('-'))
-        except:
-            year, month = datetime.now().year, datetime.now().month
-        
-        # Get attendance for the month
-        import calendar
-        num_days = calendar.monthrange(year, month)[1]
-        
-        attendance_records = []
-        for day in range(1, num_days + 1):
-            date_str = f\"{year}-{month:02d}-{day:02d}\"
-            records = query_db('teacher_attendance', teacher_id=teacher_id, date=date_str)
-            attendance_records.extend(records)
-        
-        # Calculate statistics
-        total_days = len(attendance_records)
-        present_days = len([a for a in attendance_records if a.get('status') == 'Present'])
-        late_days = len([a for a in attendance_records if a.get('status') == 'Late'])
-        leave_days = len([a for a in attendance_records if a.get('status') == 'Leave'])
-        absent_days = total_days - present_days - late_days - leave_days
-        
-        attendance_percentage = round((present_days / total_days * 100), 1) if total_days > 0 else 0
-        
-        # Sort by date descending
-        attendance_records.sort(key=lambda x: x.get('date', ''), reverse=True)
-        
-        return render_template('teacher/attendance.html',
-                             attendance_records=attendance_records,
-                             total_days=total_days,
-                             present_days=present_days,
-                             late_days=late_days,
-                             leave_days=leave_days,
-                             absent_days=absent_days,
-                             attendance_percentage=attendance_percentage,
-                             month_filter=month_filter)
-    except Exception as e:
-        print(f\"Teacher attendance view error: {e}\")
-        flash('উপস্থিতি রেকর্ড লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('teacher_dashboard'))
-
-@app.route('/teacher/profile')
-@login_required
-@teacher_required
-def teacher_profile():
-    \"\"\"Teacher profile page with photo\"\\"
-    try:
-        teacher_profile = current_user.get_teacher_profile()
-        if not teacher_profile:
-            flash('শিক্ষক প্রোফাইল পাওয়া যায়নি।', 'error')
-            return redirect(url_for('role_home'))
-        
-        teacher_id = current_user.teacher_id
-        has_photo = get_photo('teacher', teacher_id) is not None
-        
-        return render_template('teacher/profile.html',
-                             teacher=teacher_profile,
-                             has_photo=has_photo)
-    except Exception as e:
-        print(f\"Teacher profile error: {e}\")
-        flash('প্রোফাইল লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('teacher_dashboard'))
-
-@app.route('/teacher/update_profile', methods=['POST'])
-@login_required
-@teacher_required
-def teacher_update_profile():
-    \"\"\"Update teacher profile and photo\"\\"
-    try:
-        teacher_id = current_user.teacher_id
-        teacher_data = get_from_db('teacher', teacher_id)
-        
-        if not teacher_data:
-            flash('শিক্ষক পাওয়া যায়নি।', 'error')
-            return redirect(url_for('teacher_profile'))
-        
-        # Update basic info if provided
-        if request.form.get('phone'):
-            teacher_data['phone'] = request.form.get('phone')
-        if request.form.get('email'):
-            teacher_data['email'] = request.form.get('email')
-        
-        teacher_data['updated_at'] = datetime.now(timezone.utc).isoformat()
-        
-        # Handle photo upload
-        photo = request.files.get('photo')
-        if photo and photo.filename:
-            saved, error = save_photo('teacher', teacher_id, photo)
-            if not saved:
-                flash(f'ফটো আপলোড ব্যর্থ: {error}', 'error')
-                return redirect(url_for('teacher_profile'))
-        
-        # Save updated data
-        if update_in_db('teacher', teacher_id, teacher_data):
-            flash('প্রোফাইল সফলভাবে আপডেট হয়েছে।', 'success')
-        else:
-            flash('প্রোফাইল আপডেট করতে সমস্যা হয়েছে।', 'error')
-        
-        return redirect(url_for('teacher_profile'))
-    except Exception as e:
-        print(f\"Teacher profile update error: {e}\")
-        flash('প্রোফাইল আপডেট করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('teacher_profile'))
-
-@app.route('/teacher/results')
-@login_required
-@teacher_required
-def teacher_results():
-    \"\"\"Teacher view results for their classes\"\\"
-    try:
-        teacher_id = current_user.teacher_id
-        class_ids = teacher_class_ids(teacher_id)
-        
-        # Get exams for teacher's classes
-        all_exams = get_from_db('exam') or []
-        teacher_exams = [e for e in all_exams if e.get('class_id') in class_ids]
-        
-        # Add class info
-        classes_map = {c.get('id'): c for c in (get_from_db('class') or []) if c}
-        for exam in teacher_exams:
-            class_data = classes_map.get(exam.get('class_id'))
-            if class_data:
-                exam['class_name'] = f\"{class_data.get('name')} - {class_data.get('section')}\"
-        
-        return render_template('teacher/results.html', exams=teacher_exams)
-    except Exception as e:
-        print(f\"Teacher results error: {e}\")
-        flash('ফলাফল লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('teacher_dashboard'))
-
-# ==================== GUARDIAN PORTAL ROUTES ====================
-
-@app.route('/guardian/dashboard')
-@login_required
-@guardian_required
-def guardian_dashboard():
-    \"\"\"Guardian dashboard\"\\"
-    try:
-        students = current_user.get_all_students()
-        active_student = current_user.get_active_student()
-        
-        if not active_student and students:
-            active_student = students[0]
-            current_user.save_active_student(active_student.get('id'))
-        
-        return render_template('guardian/dashboard.html',
-                             active_student=active_student,
-                             all_students=students)
-    except Exception as e:
-        print(f\"Guardian dashboard error: {e}\")
-        flash('ড্যাশবোর্ড লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('role_home'))
-
-@app.route('/guardian/switch_child', methods=['POST'])
-@login_required
-@guardian_required
-def guardian_switch_child():
-    \"\"\"Switch active student for guardian\"\\"
-    try:
-        student_id = request.form.get('student_id')
-        if student_id in current_user.student_ids:
-            current_user.save_active_student(student_id)
-            flash('শিক্ষার্থী পরিবর্তন করা হয়েছে।', 'success')
-        else:
-            flash('অবৈধ শিক্ষার্থী।', 'error')
-    except Exception as e:
-        flash('শিক্ষার্থী পরিবর্তনে সমস্যা হয়েছে।', 'error')
-    
-    return redirect(request.referrer or url_for('guardian_dashboard'))
-
-@app.route('/guardian/fees')
-@login_required
-@guardian_required
-def guardian_fees():
-    \"\"\"Guardian view fees for their children\"\\"
-    try:
-        active_student = current_user.get_active_student()
-        all_students = current_user.get_all_students()
-        
-        if not active_student:
-            return render_template('guardian/fees.html',
-                                 active_student=None,
-                                 all_students=all_students,
-                                 fees=[],
-                                 total_fee=0,
-                                 paid_fee=0,
-                                 due_fee=0)
-        
-        # Get fees for active student
-        fees = query_db('fee', student_id=active_student.get('id')) or []
-        
-        total_fee = sum(f.get('amount', 0) for f in fees)
-        paid_fee = sum(f.get('amount', 0) for f in fees if f.get('is_paid', False))
-        due_fee = total_fee - paid_fee
-        
-        return render_template('guardian/fees.html',
-                             active_student=active_student,
-                             all_students=all_students,
-                             fees=fees,
-                             total_fee=total_fee,
-                             paid_fee=paid_fee,
-                             due_fee=due_fee)
-    except Exception as e:
-        print(f\"Guardian fees error: {e}\")
-        flash('ফি তথ্য লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('guardian_dashboard'))
-
-@app.route('/guardian/attendance')
-@login_required
-@guardian_required
-def guardian_attendance():
-    \"\"\"Guardian view attendance for their children\"\\"
-    try:
-        active_student = current_user.get_active_student()
-        all_students = current_user.get_all_students()
-        
-        if not active_student:
-            return render_template('guardian/attendance.html',
-                                 active_student=None,
-                                 all_students=all_students,
-                                 attendance=[],
-                                 attendance_percentage=0)
-        
-        # Get attendance for active student
-        attendance = query_db('attendance', student_id=active_student.get('id')) or []
-        
-        # Calculate percentage
-        total_days = len(attendance)
-        present_days = len([a for a in attendance if a.get('status') == 'Present'])
-        attendance_percentage = round((present_days / total_days * 100), 1) if total_days > 0 else 0
-        
-        # Sort by date descending
-        attendance.sort(key=lambda x: x.get('date', ''), reverse=True)
-        
-        return render_template('guardian/attendance.html',
-                             active_student=active_student,
-                             all_students=all_students,
-                             attendance=attendance[:30],  # Last 30 days
-                             attendance_percentage=attendance_percentage)
-    except Exception as e:
-        print(f\"Guardian attendance error: {e}\")
-        flash('উপস্থিতি তথ্য লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('guardian_dashboard'))
-
-@app.route('/guardian/academic')
-@login_required
-@guardian_required
-def guardian_academic():
-    \"\"\"Guardian view academic results for their children\"\\"
-    try:
-        active_student = current_user.get_active_student()
-        all_students = current_user.get_all_students()
-        
-        if not active_student:
-            return render_template('guardian/academic.html',
-                                 active_student=None,
-                                 all_students=all_students,
-                                 results=[])
-        
-        # Get results for active student
-        results = query_db('result', student_id=active_student.get('id')) or []
-        
-        # Add exam info
-        exams_map = {e.get('id'): e for e in (get_from_db('exam') or []) if e}
-        for result in results:
-            exam = exams_map.get(result.get('exam_id'))
-            if exam:
-                result['exam_name'] = exam.get('name')
-                result['subject'] = exam.get('subject')
-                result['total_marks'] = exam.get('total_marks', 100)
-                result['grade'] = calculate_grade(result.get('marks_obtained', 0), exam.get('total_marks', 100))
-        
-        # Sort by date descending
-        results.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-        
-        return render_template('guardian/academic.html',
-                             active_student=active_student,
-                             all_students=all_students,
-                             results=results)
-    except Exception as e:
-        print(f\"Guardian academic error: {e}\")
-        flash('একাডেমিক তথ্য লোড করতে সমস্যা হয়েছে।', 'error')
-        return redirect(url_for('guardian_dashboard'))
