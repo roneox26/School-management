@@ -5798,7 +5798,7 @@ if __name__ == '__main__':
 @login_required
 @teacher_required
 def teacher_dashboard():
-    \"\"\"Teacher dashboard with their classes and attendance\"\\"
+    """Teacher dashboard with their classes and attendance"""
     try:
         teacher_profile = current_user.get_teacher_profile()
         if not teacher_profile:
