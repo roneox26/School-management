@@ -1,4 +1,5 @@
 import sys
+import os
 import traceback
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -13,9 +14,12 @@ with app.test_client() as c:
     admins = get_from_db('admin')
     print(f"Admin found: {admins[0].get('username') if admins else 'NONE'}")
 
+    password = os.environ.get('ADMIN_PASSWORD')
+    if not password:
+        raise RuntimeError('Set ADMIN_PASSWORD before running this diagnostic')
     resp = c.post('/login', data={
         'username': admins[0].get('username'),
-        'password': 'password123',
+        'password': password,
         'role': 'admin'
     }, follow_redirects=True)
     print(f"Login status: {resp.status_code}")

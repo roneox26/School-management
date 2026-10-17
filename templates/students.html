@@ -159,7 +159,8 @@
                     <td>
                         <div class="student-name-cell">
                             {% if student.get('id') %}
-                            <img class="student-avatar" src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
+                            <img class="student-avatar" loading="lazy" decoding="async" width="40" height="40"
+                                src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
                                 alt="{{ student.name }} photo"
                                 onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
                             <div class="student-avatar" style="display:none;">

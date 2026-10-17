@@ -57,6 +57,7 @@
 {% if students %}
 <form method="POST" action="{{ url_for('mark_attendance') }}">
     <input type="hidden" name="date" value="{{ date }}">
+    <input type="hidden" name="class_id" value="{{ request.args.get('class_id', '') }}">
 
     <!-- Statistics Cards -->
     <div class="row mb-4">

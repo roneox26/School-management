@@ -42,9 +42,11 @@
                                     <button class="btn btn-sm btn-outline-warning" onclick="editExam({{ exam.id }})">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <a href="{{ url_for('send_exam_reminder', exam_id=exam.id) }}" class="btn btn-sm btn-outline-success" onclick="return confirm('Send exam reminder to all students in this class?')">
-                                        <i class="fas fa-bell"></i> Remind
-                                    </a>
+                                    <form method="POST" action="{{ url_for('send_exam_reminder', exam_id=exam.id) }}" class="d-inline" onsubmit="return confirm('Send exam reminder to all students in this class?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-bell"></i> Remind
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

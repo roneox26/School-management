@@ -110,16 +110,20 @@
                     <td>
                         <div style="display:flex;gap:.375rem;flex-wrap:wrap;">
                             {% if not fee.get('is_paid', False) %}
-                            <a href="{{ url_for('mark_fee_paid', fee_id=fee.get('id')) }}" class="btn btn-sm btn-ghost"
-                                style="color:var(--color-success);" onclick="return confirm('Mark this fee as paid?')"
-                                title="Mark Paid">
-                                <i class="fas fa-check"></i>
-                            </a>
-                            <a href="{{ url_for('send_fee_reminder', fee_id=fee.get('id')) }}"
-                                class="btn btn-sm btn-ghost" style="color:var(--brand-primary);"
-                                onclick="return confirm('Send reminder?')" title="Send SMS Reminder">
-                                <i class="fas fa-bell"></i>
-                            </a>
+                            <form method="POST" action="{{ url_for('mark_fee_paid', fee_id=fee.get('id')) }}" style="display:inline"
+                                onsubmit="return confirm('Mark this fee as paid?')">
+                                <button type="submit" class="btn btn-sm btn-ghost"
+                                    style="color:var(--color-success);" title="Mark Paid">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('send_fee_reminder', fee_id=fee.get('id')) }}"
+                                style="display:inline" onsubmit="return confirm('Send reminder?')">
+                                <button type="submit" class="btn btn-sm btn-ghost"
+                                    style="color:var(--brand-primary);" title="Send SMS Reminder">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                            </form>
                             {% endif %}
                             <button class="btn btn-sm btn-ghost" style="color:var(--color-danger);"
                                 onclick="deleteFee('{{ fee.get('id') }}')" title="Delete">

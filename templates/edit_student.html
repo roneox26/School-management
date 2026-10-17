@@ -17,7 +17,8 @@
 
                         <div class="row mb-4">
                             <div class="col-md-4 text-center">
-                                <img id="studentPhoto" src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
+                                <img id="studentPhoto" loading="lazy" decoding="async" width="180" height="180"
+                                    src="{{ url_for('serve_photo', entity_type='student', entity_id=student.id) }}"
                                     alt="Student Photo" class="img-fluid rounded" style="max-width:180px;height:180px;object-fit:cover;">
                                 <div id="studentPhotoEmpty" class="border rounded d-flex align-items-center justify-content-center text-muted"
                                     style="max-width:180px;height:180px;display:none;">No photo</div>

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{% block title %}অভিভাবক পোর্টাল{% endblock %} — SchoolMS</title>
   <meta name="description" content="School Management System — Guardian Portal">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="theme-color" content="#6366f1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -115,6 +116,25 @@
   </div>
 
   <script>
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    document.addEventListener('submit', (event) => {
+      if (event.target.method.toUpperCase() !== 'POST' || !csrfToken) return;
+      if (!event.target.querySelector('input[name="csrf_token"]')) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrf_token';
+        input.value = csrfToken;
+        event.target.appendChild(input);
+      }
+    });
+    if (csrfToken) {
+      const originalFetch = window.fetch;
+      window.fetch = (input, init = {}) => {
+        const options = { ...init, headers: new Headers(init.headers || {}) };
+        if ((options.method || 'GET').toUpperCase() !== 'GET') options.headers.set('X-CSRFToken', csrfToken);
+        return originalFetch(input, options);
+      };
+    }
     const gpSidebar = document.getElementById('gpSidebar');
     const gpMenuToggle = document.getElementById('gpMenuToggle');
     gpMenuToggle?.addEventListener('click', () => gpSidebar?.classList.toggle('open'));

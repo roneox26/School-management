@@ -74,7 +74,8 @@
                 <tr>
                     <td>
                         <div style="display:flex;align-items:center;gap:.75rem;">
-                            <img class="teacher-avatar" src="{{ url_for('serve_photo', entity_type='teacher', entity_id=teacher.id) }}"
+                            <img class="teacher-avatar" loading="lazy" decoding="async" width="40" height="40"
+                                src="{{ url_for('serve_photo', entity_type='teacher', entity_id=teacher.id) }}"
                                 alt="{{ teacher.name }} photo"
                                 onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
                             <div class="teacher-avatar" style="display:none;">{{ teacher.name[0].upper() if teacher.name else 'T' }}</div>

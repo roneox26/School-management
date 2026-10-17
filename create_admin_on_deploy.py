@@ -14,9 +14,16 @@ from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash
 
 # ── Read credentials from environment variables ──────────────────────────────
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "Rone16")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Rone@##16")
-ADMIN_EMAIL    = os.environ.get("ADMIN_EMAIL",    "roneox16@gmail.com")
+def required_env(name):
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"{name} must be configured")
+    return value
+
+
+ADMIN_USERNAME = required_env("ADMIN_USERNAME")
+ADMIN_PASSWORD = required_env("ADMIN_PASSWORD")
+ADMIN_EMAIL    = required_env("ADMIN_EMAIL")
 DATABASE_URL   = os.environ.get("DATABASE_URL")
 
 def get_connection():
@@ -66,6 +73,7 @@ def create_or_update_admin(conn, db_type):
 
     rows = cursor.fetchall()
     existing_id = None
+    row_data = None
 
     for row in rows:
         row_data = json.loads(row[1] if db_type == "postgres" else row["data"])
@@ -78,7 +86,9 @@ def create_or_update_admin(conn, db_type):
 
     if existing_id:
         # Update existing admin password
-        admin_data = json.loads(row_data if isinstance(row_data, str) else json.dumps(row_data))
+        if row_data is None:
+            raise RuntimeError("Admin record was found without readable data")
+        admin_data = row_data
         admin_data["password_hash"] = password_hash
         admin_data["email"]         = ADMIN_EMAIL
         admin_data["updated_at"]    = now

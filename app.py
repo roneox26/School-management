@@ -31,9 +31,10 @@ except Exception as e:
     print(f"[APP] ERROR during init_app(): {str(e)}")
     import traceback
     traceback.print_exc()
+    raise
 
 print("[APP] Flask app ready to handle requests")
 
 # This is what gunicorn will call
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=False)

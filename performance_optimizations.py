@@ -105,7 +105,7 @@ def sms_worker():
             item = sms_queue.get(timeout=1)
             send_infobip_sms(item['phone'], item['message'])
             sms_queue.task_done()
-        except:
+        except Exception:
             continue
 
 
@@ -139,7 +139,7 @@ def get_attendance_report_optimized(class_filter='', month_filter=''):
     # Parse month
     try:
         filter_year, filter_month = map(int, month_filter.split('-'))
-    except:
+    except (TypeError, ValueError):
         filter_year, filter_month = datetime.now().year, datetime.now().month
     
     # Batch load data
@@ -158,7 +158,7 @@ def get_attendance_report_optimized(class_filter='', month_filter=''):
                 record_date = datetime.fromisoformat(record['date'])
                 if record_date.month == filter_month and record_date.year == filter_year:
                     filtered_attendance.append(record)
-            except:
+            except (TypeError, ValueError):
                 pass
     
     # Calculate statistics

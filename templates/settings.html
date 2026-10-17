@@ -18,13 +18,13 @@
                 <form id="smsConfigForm">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Infobip API Key</label>
+                            <label class="form-label">SMS.net.bd API Key</label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="infobipKey" value="{% if sms_config.api_key %}{{ sms_config.api_key[:20] }}...{% else %}Not configured{% endif %}" readonly>
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('infobipKey')">
+                                <input type="password" class="form-control" id="smsNetBdKey" value="{% if sms_config.api_key %}{{ sms_config.api_key[:20] }}...{% else %}Not configured{% endif %}" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('smsNetBdKey')">
                                     <i class="fas fa-eye" id="toggleIcon"></i>
                                 </button>
-                                <button class="btn btn-outline-secondary" type="button" onclick="editField('infobipKey')">
+                                <button class="btn btn-outline-secondary" type="button" onclick="editField('smsNetBdKey')">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </div>
@@ -35,12 +35,12 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Base URL</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="infobipUrl" value="{{ sms_config.base_url }}" readonly>
-                                <button class="btn btn-outline-secondary" type="button" onclick="editField('infobipUrl')">
+                                <input type="text" class="form-control" id="smsNetBdUrl" value="{{ sms_config.base_url }}" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="editField('smsNetBdUrl')">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </div>
-                            <small class="text-muted">Infobip API endpoint</small>
+                            <small class="text-muted">SMS.net.bd API endpoint</small>
                         </div>
                     </div>
 
@@ -48,8 +48,8 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Sender ID</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="infobipSender" value="{{ sms_config.sender }}" readonly>
-                                <button class="btn btn-outline-secondary" type="button" onclick="editField('infobipSender')">
+                                <input type="text" class="form-control" id="smsNetBdSender" value="{{ sms_config.sender }}" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="editField('smsNetBdSender')">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </div>
@@ -372,9 +372,9 @@ function saveConfiguration() {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            api_key: document.getElementById('infobipKey').value,
-            base_url: document.getElementById('infobipUrl').value,
-            sender: document.getElementById('infobipSender').value
+            api_key: document.getElementById('smsNetBdKey').value,
+            base_url: document.getElementById('smsNetBdUrl').value,
+            sender: document.getElementById('smsNetBdSender').value
         })
     })
     .then(response => response.json())

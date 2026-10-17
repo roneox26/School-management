@@ -1,13 +1,18 @@
 import io
 import json
 import os
+import hmac
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 import uuid
 import time
 import sys
+import threading
+from contextlib import contextmanager
 
 import requests
+from PIL import Image, ImageOps, UnidentifiedImageError
 # import pywhatkit as kit
 from dotenv import load_dotenv
 import sqlite3
@@ -18,6 +23,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     send_file,
     url_for,
 )
@@ -31,6 +37,7 @@ from flask_login import (
 )
 from flask_mail import Mail, Message
 from flask_wtf import FlaskForm
+from flask_wtf.csrf import CSRFError, CSRFProtect, generate_csrf
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -53,14 +60,26 @@ except ImportError:
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+if not app.config['SECRET_KEY']:
+    if os.environ.get('FLASK_ENV', 'production').strip().lower() == 'production':
+        raise RuntimeError('SECRET_KEY must be configured in production')
+    app.config['SECRET_KEY'] = os.urandom(32).hex()
 
 # Production configuration
-if os.environ.get('FLASK_ENV') == 'production':
+if os.environ.get('FLASK_ENV', 'production').lower() == 'production':
     app.config['DEBUG'] = False
     app.config['TESTING'] = False
 else:
     app.config['DEBUG'] = True
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'True').lower() == 'true'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['REMEMBER_COOKIE_SECURE'] = app.config['SESSION_COOKIE_SECURE']
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+csrf = CSRFProtect(app)
 
 # Add custom filter for JSON parsing in templates
 @app.template_filter('from_json')
@@ -70,19 +89,48 @@ def from_json_filter(s):
     except Exception:
         return []
 
+
+@app.context_processor
+def security_context():
+    return {'csrf_token': generate_csrf}
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    return jsonify({'success': False, 'message': 'Invalid or missing CSRF token.'}), 400
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault(
+        'Content-Security-Policy',
+        "default-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+        "https://fonts.googleapis.com https://fonts.gstatic.com; "
+        "img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+        "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com"
+    )
+    if request.is_secure:
+        response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000')
+    return response
+
 # Email Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', True) == 'True'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', False) == 'True'
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').strip().lower() in {'1', 'true', 'yes', 'on'}
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').strip().lower() in {'1', 'true', 'yes', 'on'}
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
-# Infobip SMS Configuration
-INFOBIP_API_KEY = os.environ.get('INFOBIP_API_KEY')
-INFOBIP_BASE_URL = os.environ.get('INFOBIP_BASE_URL', 'https://api.infobip.com')
-INFOBIP_SENDER = os.environ.get('INFOBIP_SENDER', 'SCHOOL')
+# SMS.net.bd configuration. Keep credentials in deployment environment variables.
+SMS_NET_BD_API_KEY = os.environ.get('SMS_NET_BD_API_KEY')
+SMS_NET_BD_SENDER_ID = os.environ.get('SMS_NET_BD_SENDER_ID')
+SMS_NET_BD_URL = 'https://api.sms.net.bd/sendsms'
 
 mail = Mail(app)
 
@@ -107,40 +155,71 @@ else:
 # Simple in-memory cache
 cache = {}
 cache_timeout = 600  # 10 minutes — doubled for better hit rate
+_cache_lock = threading.RLock()
 
 def get_cache_key(collection, data_id=None):
     return f"cache_{collection}_{data_id or 'all'}"
 
 def is_cache_valid(cache_key):
-    if cache_key not in cache:
-        return False
-    return (datetime.now(timezone.utc) - cache[cache_key]['timestamp']).total_seconds() < cache_timeout
+    with _cache_lock:
+        if cache_key not in cache:
+            return False
+        return (datetime.now(timezone.utc) - cache[cache_key]['timestamp']).total_seconds() < cache_timeout
 
 def set_cache(cache_key, data):
-    cache[cache_key] = {
-        'data': data,
-        'timestamp': datetime.now(timezone.utc)
-    }
+    with _cache_lock:
+        cache[cache_key] = {
+            'data': deepcopy(data),
+            'timestamp': datetime.now(timezone.utc)
+        }
 
 def get_cache(cache_key):
     if is_cache_valid(cache_key):
-        return cache[cache_key]['data']
+        with _cache_lock:
+            return deepcopy(cache[cache_key]['data'])
     return None
 
 def clear_cache(collection=None):
-    if collection:
-        keys_to_remove = [k for k in cache.keys() if k.startswith(f"cache_{collection}")]
-        for key in keys_to_remove:
-            del cache[key]
-    else:
-        cache.clear()
+    with _cache_lock:
+        if collection:
+            prefixes = [f"cache_{collection}"]
+            if collection in {'class', 'student'}:
+                prefixes.append('classes_list_all')
+            if collection == 'teacher':
+                prefixes.append('teachers_list_active')
+            keys_to_remove = [
+                key for key in list(cache)
+                if any(key.startswith(prefix) for prefix in prefixes)
+            ]
+            for key in keys_to_remove:
+                del cache[key]
+        else:
+            cache.clear()
+
+
+def schedule_day(schedule):
+    return schedule.get('day') or schedule.get('day_of_week') or ''
+
+
+def schedule_times(schedule):
+    start = schedule.get('start_time')
+    end = schedule.get('end_time')
+    if start and end:
+        return start, end
+    slot = schedule.get('time_slot', '')
+    if '-' in slot:
+        return tuple(part.strip() for part in slot.split('-', 1))
+    return slot, ''
 
 # Helper functions for ReplDB
 
 # ==================== Database Setup (SQLite3 + PostgreSQL Support) ====================
 # Determine which database to use
 DATABASE_URL = os.environ.get('DATABASE_URL')
-USE_POSTGRES = DATABASE_URL and DATABASE_URL.startswith('postgresql')
+USE_POSTGRES = bool(DATABASE_URL and (
+    DATABASE_URL.startswith('postgresql://') or
+    DATABASE_URL.startswith('postgres://')
+))
 
 if USE_POSTGRES:
     print("[INIT] Using PostgreSQL database")
@@ -149,12 +228,13 @@ else:
     DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'school_management.db')
     print(f"[INIT] Using SQLite database: {DATABASE}")
 
-# Persistent SQLite connection — created once, reused across requests.
-# This eliminates the per-request connection + PRAGMA overhead (~5-10 ms saved each call).
-_sqlite_conn = None
+# Keep one SQLite connection per thread. Sharing one connection across request
+# threads can interleave transactions and cause hard-to-reproduce locking bugs.
+_sqlite_state = threading.local()
+_sqlite_lock = threading.Lock()
 
 def _make_sqlite_conn():
-    conn = sqlite3.connect(DATABASE, check_same_thread=False)
+    conn = sqlite3.connect(DATABASE, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
@@ -163,23 +243,35 @@ def _make_sqlite_conn():
     conn.execute("PRAGMA mmap_size=268435456")
     return conn
 
+@contextmanager
 def get_db_connection():
-    """Get database connection (SQLite or PostgreSQL)"""
+    """Yield a database connection and always close PostgreSQL connections."""
     if USE_POSTGRES:
         import psycopg2
         conn = psycopg2.connect(DATABASE_URL)
-        return conn
-    else:
-        global _sqlite_conn
-        if _sqlite_conn is None:
-            _sqlite_conn = _make_sqlite_conn()
-        else:
-            # Test if connection is still alive; reconnect if not
-            try:
-                _sqlite_conn.execute("SELECT 1")
-            except Exception:
-                _sqlite_conn = _make_sqlite_conn()
-        return _sqlite_conn
+        try:
+            yield conn
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+        return
+
+    conn = getattr(_sqlite_state, 'connection', None)
+    if conn is None:
+        with _sqlite_lock:
+            conn = getattr(_sqlite_state, 'connection', None)
+            if conn is None:
+                conn = _make_sqlite_conn()
+                _sqlite_state.connection = conn
+    try:
+        conn.execute("SELECT 1")
+    except sqlite3.Error:
+        conn.close()
+        conn = _make_sqlite_conn()
+        _sqlite_state.connection = conn
+    yield conn
 
 def init_db():
     """Initialize database with appropriate schema"""
@@ -253,7 +345,7 @@ def init_db():
         # Verify admin exists
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT COUNT(*) as count FROM app_data WHERE collection=%s', ('admin',)) if USE_POSTGRES else cursor.execute('SELECT COUNT(*) as count FROM app_data WHERE collection="admin"')
+            cursor.execute('SELECT COUNT(*) as count FROM app_data WHERE collection=%s', ('admin',)) if USE_POSTGRES else cursor.execute("SELECT COUNT(*) as count FROM app_data WHERE collection=?", ('admin',))
             admin_count = cursor.fetchone()
             admin_users = admin_count[0] if USE_POSTGRES else admin_count['count']
             print(f"[INIT] Admin users in database: {admin_users}")
@@ -270,9 +362,44 @@ print("[INIT] Cache cleared on startup")
 # ==================== PostgreSQL/SQLite Photo Storage ====================
 ALLOWED_PHOTO_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
 MAX_PHOTO_SIZE = 16 * 1024 * 1024
+PHOTO_MAX_DIMENSION = 300
+_photo_cache = {}
+_photo_cache_lock = threading.RLock()
+_PHOTO_CACHE_MAX = 200
+
+
+def _photo_cache_key(entity_type, entity_id):
+    return f'{entity_type}_{entity_id}'
+
+
+def _set_photo_cache(cache_key, value):
+    with _photo_cache_lock:
+        if len(_photo_cache) >= _PHOTO_CACHE_MAX and cache_key not in _photo_cache:
+            _photo_cache.pop(next(iter(_photo_cache)))
+        _photo_cache[cache_key] = value
+
+
+def _invalidate_photo_cache(entity_type, entity_id):
+    with _photo_cache_lock:
+        _photo_cache.pop(_photo_cache_key(entity_type, entity_id), None)
+
+
+def _compress_photo(photo_data):
+    with Image.open(io.BytesIO(photo_data)) as source:
+        image = ImageOps.exif_transpose(source)
+        if image.mode not in ('RGB', 'L'):
+            image = image.convert('RGB')
+        image.thumbnail(
+            (PHOTO_MAX_DIMENSION, PHOTO_MAX_DIMENSION),
+            Image.Resampling.LANCZOS
+        )
+        output = io.BytesIO()
+        image.save(output, format='JPEG', quality=80, optimize=True)
+        return output.getvalue()
+
 
 def save_photo(entity_type, entity_id, photo):
-    """Replace an entity photo with binary data stored in the database."""
+    """Resize and compress an entity photo before storing it."""
     if not photo or not photo.filename:
         return False, 'No photo selected'
     if photo.mimetype not in ALLOWED_PHOTO_TYPES:
@@ -282,6 +409,13 @@ def save_photo(entity_type, entity_id, photo):
     if len(photo_data) > MAX_PHOTO_SIZE:
         return False, 'Photo must be 16MB or smaller'
 
+    try:
+        photo_data = _compress_photo(photo_data)
+    except (UnidentifiedImageError, OSError):
+        return False, 'The uploaded file is not a valid image'
+
+    filename = os.path.splitext(photo.filename)[0] + '.jpg'
+    mime_type = 'image/jpeg'
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -293,7 +427,7 @@ def save_photo(entity_type, entity_id, photo):
                 cursor.execute(
                     "INSERT INTO photos (entity_type, entity_id, photo_data, filename, mime_type, uploaded_at) "
                     "VALUES (%s, %s, %s, %s, %s, %s)",
-                    (entity_type, entity_id, photo_data, photo.filename, photo.mimetype,
+                    (entity_type, entity_id, photo_data, filename, mime_type,
                      datetime.now(timezone.utc))
                 )
             else:
@@ -304,16 +438,26 @@ def save_photo(entity_type, entity_id, photo):
                 cursor.execute(
                     "INSERT INTO photos (entity_type, entity_id, photo_data, filename, mime_type, uploaded_at) "
                     "VALUES (?, ?, ?, ?, ?, ?)",
-                    (entity_type, entity_id, photo_data, photo.filename, photo.mimetype,
+                    (entity_type, entity_id, photo_data, filename, mime_type,
                      datetime.now(timezone.utc).isoformat())
                 )
             conn.commit()
+        _set_photo_cache(_photo_cache_key(entity_type, entity_id), {
+            'data': photo_data,
+            'filename': filename,
+            'mime_type': mime_type
+        })
         return True, None
     except Exception as e:
         print(f"Error saving {entity_type} photo: {e}")
         return False, 'Could not save photo'
 
 def get_photo(entity_type, entity_id):
+    cache_key = _photo_cache_key(entity_type, entity_id)
+    with _photo_cache_lock:
+        if cache_key in _photo_cache:
+            return _photo_cache[cache_key]
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if USE_POSTGRES:
@@ -328,10 +472,45 @@ def get_photo(entity_type, entity_id):
             )
         row = cursor.fetchone()
         if not row:
+            _set_photo_cache(cache_key, None)
             return None
-        return {'data': bytes(row[0]), 'filename': row[1], 'mime_type': row[2]}
+        original_data = bytes(row[0])
+        raw_data = original_data
+        mime_type = row[2]
+        filename = row[1]
+        if len(raw_data) > 100 * 1024 or mime_type != 'image/jpeg':
+            try:
+                raw_data = _compress_photo(raw_data)
+                mime_type = 'image/jpeg'
+                if raw_data != original_data:
+                    if USE_POSTGRES:
+                        cursor.execute(
+                            "UPDATE photos SET photo_data = %s, filename = %s, mime_type = %s "
+                            "WHERE entity_type = %s AND entity_id = %s",
+                            (raw_data, f'{os.path.splitext(filename)[0]}.jpg', mime_type,
+                             entity_type, entity_id)
+                        )
+                    else:
+                        cursor.execute(
+                            "UPDATE photos SET photo_data = ?, filename = ?, mime_type = ? "
+                            "WHERE entity_type = ? AND entity_id = ?",
+                            (raw_data, f'{os.path.splitext(filename)[0]}.jpg', mime_type,
+                             entity_type, entity_id)
+                        )
+                    conn.commit()
+                    filename = f'{os.path.splitext(filename)[0]}.jpg'
+            except (UnidentifiedImageError, OSError):
+                pass
+        result = {
+            'data': raw_data,
+            'filename': filename,
+            'mime_type': mime_type
+        }
+        _set_photo_cache(cache_key, result)
+        return result
 
 def delete_photo(entity_type, entity_id):
+    _invalidate_photo_cache(entity_type, entity_id)
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if USE_POSTGRES:
@@ -347,14 +526,102 @@ def delete_photo(entity_type, entity_id):
         conn.commit()
         return cursor.rowcount > 0
 
+
+def migrate_existing_photos(batch_size=50):
+    """Resize existing photos in bounded database batches.
+
+    Invalid images are left unchanged and reported so one bad row does not
+    prevent the remaining photos from being migrated.
+    """
+    if not isinstance(batch_size, int) or batch_size < 1 or batch_size > 500:
+        raise ValueError('batch_size must be between 1 and 500')
+
+    stats = {'scanned': 0, 'migrated': 0, 'unchanged': 0, 'skipped': 0}
+    offset = 0
+
+    while True:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT entity_type, entity_id, photo_data, filename, mime_type '
+                f'FROM photos ORDER BY entity_type, entity_id LIMIT {batch_size} OFFSET {offset}'
+            )
+            rows = cursor.fetchall()
+            if not rows:
+                break
+
+            for row in rows:
+                stats['scanned'] += 1
+                entity_type, entity_id, photo_data, filename, mime_type = row
+                original_data = bytes(photo_data)
+                try:
+                    compressed_data = _compress_photo(original_data)
+                except (UnidentifiedImageError, OSError, ValueError):
+                    stats['skipped'] += 1
+                    continue
+
+                normalized_filename = f'{os.path.splitext(filename or entity_id)[0]}.jpg'
+                if (
+                    compressed_data == original_data
+                    and mime_type == 'image/jpeg'
+                    and filename == normalized_filename
+                ):
+                    stats['unchanged'] += 1
+                    continue
+
+                if USE_POSTGRES:
+                    cursor.execute(
+                        'UPDATE photos SET photo_data = %s, filename = %s, mime_type = %s '
+                        'WHERE entity_type = %s AND entity_id = %s',
+                        (
+                            compressed_data,
+                            normalized_filename,
+                            'image/jpeg',
+                            entity_type,
+                            entity_id,
+                        )
+                    )
+                else:
+                    cursor.execute(
+                        'UPDATE photos SET photo_data = ?, filename = ?, mime_type = ? '
+                        'WHERE entity_type = ? AND entity_id = ?',
+                        (
+                            compressed_data,
+                            normalized_filename,
+                            'image/jpeg',
+                            entity_type,
+                            entity_id,
+                        )
+                    )
+                _invalidate_photo_cache(entity_type, entity_id)
+                stats['migrated'] += 1
+
+            conn.commit()
+        offset += len(rows)
+
+    with _photo_cache_lock:
+        _photo_cache.clear()
+    return stats
+
+
 @app.route('/get_photo/<entity_type>/<entity_id>')
 @login_required
 def serve_photo(entity_type, entity_id):
     if entity_type not in {'student', 'teacher'}:
         return 'Photo not found', 404
+    role = getattr(current_user, 'role', 'admin')
+    if role == 'teacher' and (entity_type != 'teacher' or entity_id != current_user.teacher_id):
+        return 'Photo not found', 404
+    if role == 'guardian' and (entity_type != 'student' or entity_id not in (current_user.student_ids or [])):
+        return 'Photo not found', 404
+    if role not in {'admin', 'teacher', 'guardian'}:
+        return 'Photo not found', 404
     photo = get_photo(entity_type, entity_id)
     if not photo:
-        return 'Photo not found', 404
+        response = app.make_response('Photo not found', 404)
+        response.cache_control.public = True
+        response.cache_control.max_age = 300
+        return response
     response = send_file(io.BytesIO(photo['data']), mimetype=photo['mime_type'], download_name=photo['filename'])
     response.cache_control.max_age = 2592000  # Cache for 30 days
     response.cache_control.public = True
@@ -363,6 +630,8 @@ def serve_photo(entity_type, entity_id):
 @app.route('/delete_photo/<entity_type>/<entity_id>', methods=['POST'])
 @login_required
 def remove_photo(entity_type, entity_id):
+    if getattr(current_user, 'role', 'admin') != 'admin':
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
     if entity_type not in {'student', 'teacher'}:
         return jsonify({'success': False, 'message': 'Invalid entity type'}), 400
     deleted = delete_photo(entity_type, entity_id)
@@ -395,8 +664,8 @@ def save_to_db(collection, data):
             del cache[key]
         return data_id
     except Exception as e:
-        print(f"Error saving to DB: {e}")
-        return None
+        app.logger.exception("Error saving to DB: collection=%s", collection)
+        raise
 
 def get_from_db(collection, data_id=None):
     """Get data from database with caching"""
@@ -457,8 +726,8 @@ def get_from_db(collection, data_id=None):
             set_cache(cache_key, data)
         return data if data_id else (data or [])
     except Exception as e:
-        print(f"Error getting from DB: {e}")
-        return None if data_id else []
+        app.logger.exception("Error getting from DB: collection=%s id=%s", collection, data_id)
+        raise
 
 def update_in_db(collection, data_id, data):
     """Update data in database"""
@@ -484,8 +753,8 @@ def update_in_db(collection, data_id, data):
             del cache[key]
         return True
     except Exception as e:
-        print(f"Error updating in DB: {e}")
-        return False
+        app.logger.exception("Error updating DB: collection=%s id=%s", collection, data_id)
+        raise
 
 def delete_from_db(collection, data_id):
     """Delete data from database"""
@@ -511,8 +780,8 @@ def delete_from_db(collection, data_id):
                 return True
         return False
     except Exception as e:
-        print(f"Error deleting from DB: {e}")
-        return False
+        app.logger.exception("Error deleting from DB: collection=%s id=%s", collection, data_id)
+        raise
 
 def query_db(collection, **filters):
     """Query data with filters using database JSON operations for performance"""
@@ -585,8 +854,8 @@ def query_db(collection, **filters):
         set_cache(cache_key, filtered_items)
         return filtered_items
     except Exception as e:
-        print(f"Error querying DB: {e}")
-        return []
+        app.logger.exception("Error querying DB: collection=%s filters=%s", collection, filters)
+        raise
 
 
 # Data Models using ReplDB
@@ -762,6 +1031,22 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+@app.route('/admin/migrate-photos', methods=['POST'])
+@login_required
+@admin_required
+def migrate_photos_route():
+    try:
+        batch_size = request.form.get('batch_size', 50, type=int)
+        stats = migrate_existing_photos(batch_size=batch_size)
+        return jsonify({'success': True, **stats})
+    except ValueError as error:
+        return jsonify({'success': False, 'message': str(error)}), 400
+    except Exception:
+        app.logger.exception('Existing photo migration failed')
+        return jsonify({'success': False, 'message': 'Photo migration failed.'}), 500
+
+
 def teacher_required(f):
     """Decorator: only Teacher can access"""
     @wraps(f)
@@ -815,7 +1100,7 @@ def enforce_legacy_admin_boundary():
     if not current_user.is_authenticated:
         return None
 
-    portal_prefixes = ('/teacher/', '/guardian/', '/api/guardian/')
+    portal_prefixes = ('/teacher/', '/guardian/', '/api/guardian/', '/get_photo/')
     public_paths = {'/', '/login', '/logout', '/role_home', '/admin/reset-password'}
     public_prefixes = ('/static/',)
     if (getattr(current_user, 'role', 'admin') != 'admin'
@@ -991,7 +1276,10 @@ def dashboard():
         total_teachers = len(teachers)
         total_classes  = len(classes)
 
-        today_attendance = len(today_attendance_records)
+        today_attendance = len([
+            record for record in today_attendance_records
+            if record and record.get('status') == 'Present'
+        ])
         attendance_percentage = round((today_attendance / total_students * 100), 2) if total_students > 0 else 0
 
         teacher_present = len([a for a in today_teacher_attendance if a and a.get('status') == 'Present'])
@@ -1054,6 +1342,7 @@ def dashboard():
 
 @app.route('/students')
 @login_required
+@admin_required
 def students():
     search = request.args.get('search', '')
     class_filter = request.args.get('class_filter', '')
@@ -1102,6 +1391,7 @@ def students():
 
 @app.route('/add_student', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_student():
     form = StudentForm()
 
@@ -1163,6 +1453,7 @@ def add_student():
 
 @app.route('/classes')
 @login_required
+@admin_required
 def classes():
     # Cache classes and teachers
     cache_key_classes = 'classes_list_all'
@@ -1195,6 +1486,7 @@ def classes():
 
 @app.route('/add_class', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_class():
     form = ClassForm()
     
@@ -1276,6 +1568,7 @@ def transfer_students_page(class_id):
 
 @app.route('/transfer_students/<class_id>', methods=['POST'])
 @login_required
+@admin_required
 def transfer_students(class_id):
     target_class_id = request.form.get('target_class_id')
     student_ids = request.form.getlist('student_ids')
@@ -1285,6 +1578,18 @@ def transfer_students(class_id):
         return redirect(url_for('transfer_students_page', class_id=class_id))
 
     try:
+        if class_id == target_class_id or not get_from_db('class', target_class_id):
+            flash('Invalid target class.', 'error')
+            return redirect(url_for('transfer_students_page', class_id=class_id))
+
+        source_student_ids = {
+            student.get('id')
+            for student in query_db('student', class_id=class_id, is_active=True)
+        }
+        if any(student_id not in source_student_ids for student_id in student_ids):
+            flash('One or more selected students do not belong to this class.', 'error')
+            return redirect(url_for('transfer_students_page', class_id=class_id))
+
         # Update students' class
         for student_id in student_ids:
             student_data = get_from_db('student', student_id)
@@ -1300,6 +1605,7 @@ def transfer_students(class_id):
 
 @app.route('/teachers')
 @login_required
+@admin_required
 def teachers():
     # Cache teachers list
     cache_key = 'teachers_list_active'
@@ -1316,7 +1622,7 @@ def teachers():
             try:
                 if isinstance(teacher_copy['joining_date'], str):
                     teacher_copy['joining_date'] = datetime.fromisoformat(teacher_copy['joining_date']).date()
-            except:
+            except (TypeError, ValueError):
                 teacher_copy['joining_date'] = None
         teachers_display.append(teacher_copy)
 
@@ -1324,6 +1630,7 @@ def teachers():
 
 @app.route('/add_teacher', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_teacher():
     form = TeacherForm()
 
@@ -1365,6 +1672,7 @@ def add_teacher():
 
 @app.route('/edit_teacher/<teacher_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_teacher(teacher_id):
     teacher = get_from_db('teacher', teacher_id)
     if not teacher:
@@ -1429,6 +1737,7 @@ def edit_teacher(teacher_id):
 
 @app.route('/delete_teacher/<teacher_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_teacher(teacher_id):
     try:
         teacher_data = get_from_db('teacher', teacher_id)
@@ -1445,6 +1754,7 @@ def delete_teacher(teacher_id):
 
 @app.route('/delete_student/<student_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_student(student_id):
     try:
         student_data = get_from_db('student', student_id)
@@ -1461,6 +1771,7 @@ def delete_student(student_id):
 
 @app.route('/sms_management')
 @login_required
+@admin_required
 def sms_management():
     templates = query_db('sms_template', is_active=True)
     all_logs = get_from_db('sms_log')
@@ -1497,6 +1808,7 @@ def add_sms_template():
 
 @app.route('/attendance')
 @login_required
+@admin_required
 def attendance():
     date = request.args.get('date', datetime.now().date().strftime('%Y-%m-%d'))
     class_id = request.args.get('class_id', '')
@@ -1549,6 +1861,7 @@ def attendance():
 
 @app.route('/teacher_attendance')
 @login_required
+@admin_required
 def teacher_attendance():
     date = request.args.get('date', datetime.now().date().strftime('%Y-%m-%d'))
 
@@ -1568,13 +1881,17 @@ def teacher_attendance():
 
 @app.route('/mark_teacher_attendance', methods=['POST'])
 @login_required
+@admin_required
 def mark_teacher_attendance():
     date = request.form.get('date')
     attendance_data = request.form.to_dict()
+    allowed_statuses = {'Present', 'Absent', 'Late', 'Leave'}
 
     for key, status in attendance_data.items():
         if key.startswith('teacher_'):
             teacher_id = key.replace('teacher_', '')
+            if status not in allowed_statuses or not get_from_db('teacher', teacher_id):
+                continue
 
             # Check if attendance already exists
             existing = query_db('teacher_attendance', teacher_id=teacher_id, date=date)
@@ -1599,6 +1916,7 @@ def mark_teacher_attendance():
 
 @app.route('/mark_attendance', methods=['POST'])
 @login_required
+@admin_required
 def mark_attendance():
     try:
         date = request.form.get('date')
@@ -1607,6 +1925,7 @@ def mark_attendance():
             return redirect(url_for('attendance'))
 
         attendance_data = request.form.to_dict()
+        selected_class_id = request.form.get('class_id', '')
         marked_count = 0
         updated_count = 0
 
@@ -1617,6 +1936,8 @@ def mark_attendance():
                 # Validate student exists
                 student = get_from_db('student', student_id)
                 if not student:
+                    continue
+                if selected_class_id and student.get('class_id') != selected_class_id:
                     continue
 
                 # Validate status
@@ -1699,6 +2020,7 @@ def mark_attendance():
 
 @app.route('/fees')
 @login_required
+@admin_required
 def fees():
     status_filter = request.args.get('status', 'all')
 
@@ -1735,13 +2057,29 @@ def fees():
 
 @app.route('/add_fee', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_fee():
     if request.method == 'POST':
+        student_id = request.form.get('student_id', '').strip()
+        fee_type = request.form.get('fee_type', '').strip()
+        due_date = request.form.get('due_date', '').strip()
+        amount_value = request.form.get('amount', '').strip()
+        try:
+            amount = float(amount_value)
+        except (TypeError, ValueError):
+            flash('Please enter a valid fee amount.', 'error')
+            return redirect(url_for('add_fee'))
+        if amount < 0 or not student_id or not fee_type or not due_date:
+            flash('All fee fields are required and amount cannot be negative.', 'error')
+            return redirect(url_for('add_fee'))
+        if not get_from_db('student', student_id):
+            flash('Student not found.', 'error')
+            return redirect(url_for('add_fee'))
         fee_data = {
-            'student_id': request.form['student_id'],
-            'fee_type': request.form['fee_type'],
-            'amount': float(request.form['amount']),
-            'due_date': request.form['due_date'],
+            'student_id': student_id,
+            'fee_type': fee_type,
+            'amount': amount,
+            'due_date': due_date,
             'is_paid': False,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
@@ -1752,8 +2090,9 @@ def add_fee():
     students = query_db('student', is_active=True)
     return render_template('add_fee.html', students=students)
 
-@app.route('/mark_fee_paid/<fee_id>')
+@app.route('/mark_fee_paid/<fee_id>', methods=['POST'])
 @login_required
+@admin_required
 def mark_fee_paid(fee_id):
     fee_data = get_from_db('fee', fee_id)
     if fee_data:
@@ -1767,6 +2106,7 @@ def mark_fee_paid(fee_id):
 
 @app.route('/exams')
 @login_required
+@admin_required
 def exams():
     exams = get_from_db('exam')
 
@@ -1783,7 +2123,7 @@ def exams():
             try:
                 if isinstance(exam_copy['exam_date'], str):
                     exam_copy['exam_date'] = datetime.fromisoformat(exam_copy['exam_date']).date()
-            except:
+            except (TypeError, ValueError):
                 exam_copy['exam_date'] = None
 
         exams_display.append(exam_copy)
@@ -1793,14 +2133,29 @@ def exams():
 
 @app.route('/add_exam', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_exam():
     if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        class_id = request.form.get('class_id', '').strip()
+        subject = request.form.get('subject', '').strip()
+        exam_date = request.form.get('exam_date', '').strip()
+        try:
+            total_marks = int(request.form.get('total_marks', ''))
+        except (TypeError, ValueError):
+            total_marks = 0
+        if not name or not class_id or not subject or not exam_date or total_marks <= 0:
+            flash('All exam fields are required and total marks must be positive.', 'error')
+            return redirect(url_for('add_exam'))
+        if not get_from_db('class', class_id):
+            flash('Class not found.', 'error')
+            return redirect(url_for('add_exam'))
         exam_data = {
-            'name': request.form['name'],
-            'class_id': request.form['class_id'],
-            'subject': request.form['subject'],
-            'exam_date': request.form['exam_date'],
-            'total_marks': int(request.form['total_marks']),
+            'name': name,
+            'class_id': class_id,
+            'subject': subject,
+            'exam_date': exam_date,
+            'total_marks': total_marks,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         save_to_db('exam', exam_data)
@@ -1832,7 +2187,7 @@ def exam_results(exam_id):
             try:
                 if isinstance(exam['exam_date'], str):
                     exam['exam_date'] = datetime.fromisoformat(exam['exam_date']).date()
-            except:
+            except (TypeError, ValueError):
                 pass
 
         # Get students in the class
@@ -1885,8 +2240,16 @@ def add_result(exam_id):
             student_ids = [request.form.get('student_id')]
         saved = 0
         for student_id in student_ids:
-            marks_value = request.form.get(f'marks_{student_id}', request.form.get('marks_obtained', '0'))
-            marks_obtained = float(marks_value)
+            marks_value = request.form.get(
+                f'marks_{student_id}',
+                request.form.get('marks_obtained', '')
+            ).strip()
+            if not marks_value:
+                continue
+            try:
+                marks_obtained = float(marks_value)
+            except (TypeError, ValueError):
+                continue
             if marks_obtained < 0 or marks_obtained > float(exam.get('total_marks', 100)):
                 continue
             existing_results = query_db('result', exam_id=exam_id, student_id=student_id)
@@ -1924,8 +2287,9 @@ def teacher_exam_results(exam_id):
         return response
     return response
 
-@app.route('/send_exam_reminder/<exam_id>')
+@app.route('/send_exam_reminder/<exam_id>', methods=['POST'])
 @login_required
+@admin_required
 def send_exam_reminder(exam_id):
     try:
         exam = get_from_db('exam', exam_id)
@@ -2001,7 +2365,7 @@ def reports():
                     paid_date = datetime.fromisoformat(fee['paid_date'])
                     if paid_date.month == current_month and paid_date.year == current_year:
                         monthly_collection += fee.get('amount', 0)
-                except:
+                except (TypeError, ValueError):
                     pass
 
         # Pending fees
@@ -2024,7 +2388,7 @@ def reports():
                     sent_date = datetime.fromisoformat(sms['sent_at'])
                     if sent_date.month == current_month and sent_date.year == current_year:
                         sms_this_month += 1
-                except:
+                except (TypeError, ValueError):
                     pass
 
         return render_template('reports.html',
@@ -2083,7 +2447,7 @@ def analytics_data():
                         paid_date = datetime.fromisoformat(fee['paid_date'])
                         if paid_date.month == month:
                             month_collection += fee.get('amount', 0)
-                    except:
+                    except (TypeError, ValueError):
                         pass
             monthly_fees.append(month_collection)
         
@@ -2175,7 +2539,7 @@ def performance_insights():
         # SMS usage analysis
         sms_logs = get_from_db('sms_log') or []
         recent_sms = [s for s in sms_logs if s.get('sent_at') and 
-                     (datetime.now() - datetime.fromisoformat(s['sent_at'])).days <= 7]
+                     (datetime.now(timezone.utc) - datetime.fromisoformat(s['sent_at'])).days <= 7]
         
         if len(recent_sms) > 100:
             insights.append({
@@ -2201,13 +2565,14 @@ def performance_insights():
 
 @app.route('/settings')
 @login_required
+@admin_required
 def settings():
     # Get current SMS configuration
     sms_config = {
-        'api_key': INFOBIP_API_KEY,
-        'base_url': INFOBIP_BASE_URL,
-        'sender': INFOBIP_SENDER,
-        'status': 'Active' if INFOBIP_API_KEY else 'Not Configured'
+        'api_key': SMS_NET_BD_API_KEY,
+        'base_url': SMS_NET_BD_URL,
+        'sender': SMS_NET_BD_SENDER_ID or '',
+        'status': 'Active' if SMS_NET_BD_API_KEY else 'Not Configured'
     }
 
     # Get SMS statistics
@@ -2231,7 +2596,7 @@ def settings():
                         success_count += 1
                     else:
                         failed_count += 1
-            except:
+            except (TypeError, ValueError):
                 pass
 
     success_rate = round((success_count / total_sms * 100), 1) if total_sms > 0 else 0
@@ -2247,6 +2612,7 @@ def settings():
 
 @app.route('/test_sms', methods=['POST'])
 @login_required
+@admin_required
 def test_sms():
     try:
         phone_number = request.json.get('phone_number')
@@ -2276,41 +2642,34 @@ def test_sms():
 
 @app.route('/update_sms_config', methods=['POST'])
 @login_required
+@admin_required
 def update_sms_config():
-    try:
-        # In a real application, you would update environment variables
-        # For this demo, we'll just return success
-        return jsonify({'success': True, 'message': 'SMS configuration updated successfully!'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Error updating configuration: {str(e)}'})
+    return jsonify({
+        'success': False,
+        'message': 'SMS configuration is managed through deployment environment variables.'
+    }), 409
 
 @app.route('/validate_sms_config', methods=['POST'])
 @login_required
+@admin_required
 def validate_sms_config():
-    try:
-        # Check if API credentials are valid by making a test request
-        url = f"{INFOBIP_BASE_URL}/accounts/1/balance"
-        headers = {
-            'Authorization': f'App {INFOBIP_API_KEY}',
-            'Accept': 'application/json'
-        }
-
-        response = requests.get(url, headers=headers)
-
-        if response.status_code == 200:
-            return jsonify({'success': True, 'message': 'SMS configuration is valid!'})
-        else:
-            return jsonify({'success': False, 'message': 'Invalid SMS configuration'})
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Validation error: {str(e)}'})
+    if SMS_NET_BD_API_KEY and SMS_NET_BD_SENDER_ID:
+        return jsonify({'success': True, 'message': 'SMS.net.bd configuration is present.'})
+    return jsonify({
+        'success': False,
+        'message': 'SMS_NET_BD_API_KEY and SMS_NET_BD_SENDER_ID must be configured.'
+    }), 503
 
 @app.route('/update_sms_templates', methods=['POST'])
 @login_required
+@admin_required
 def update_sms_templates():
     try:
-        fee_template = request.form.get('fee_template')
-        exam_template = request.form.get('exam_template')
+        fee_template = request.form.get('fee_template', '').strip()
+        exam_template = request.form.get('exam_template', '').strip()
+        if not fee_template or not exam_template:
+            flash('Both SMS templates are required.', 'error')
+            return redirect(url_for('settings'))
 
         # Update fee template
         fee_templates = query_db('sms_template', template_type='fee_due', is_active=True)
@@ -2333,10 +2692,16 @@ def update_sms_templates():
 
 @app.route('/clear_all_data', methods=['POST'])
 @login_required
+@admin_required
 def clear_all_data():
     try:
         # Delete all data from ReplDB (except admin)
-        collections = ['student', 'teacher', 'class', 'attendance', 'fee', 'exam', 'result', 'sms_template', 'sms_log', 'notice']
+        collections = [
+            'student', 'teacher', 'class', 'attendance', 'teacher_attendance',
+            'fee', 'exam', 'result', 'sms_template', 'sms_log', 'notice',
+            'schedule', 'subject', 'period', 'teacher_user', 'guardian_user',
+            'leave_request', 'homework', 'message', 'class_session'
+        ]
 
         for collection in collections:
             with get_db_connection() as conn:
@@ -2347,6 +2712,13 @@ def clear_all_data():
                     cursor.execute("DELETE FROM app_data WHERE collection = ?", (collection,))
                 conn.commit()
             clear_cache(collection)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM photos")
+            conn.commit()
+        with _photo_cache_lock:
+            _photo_cache.clear()
+        clear_cache()
 
         flash('All data has been cleared successfully!', 'success')
     except Exception as e:
@@ -2599,7 +2971,7 @@ def teacher_attendance_report():
                         record_date = datetime.fromisoformat(record['date'])
                         if record_date.month == current_month and record_date.year == current_year:
                             monthly_attendance.append(record)
-                    except:
+                    except (TypeError, ValueError):
                         pass
             
             total_days = len(monthly_attendance)
@@ -2648,7 +3020,7 @@ def teacher_attendance_report():
                             daily_summary[date_str]['leave'] += 1
                         else:
                             daily_summary[date_str]['absent'] += 1
-                except:
+                except (TypeError, ValueError):
                     pass
         
         # Convert daily summary to list and sort by date
@@ -2812,8 +3184,9 @@ def attendance_report():
                              selected_class='',
                              selected_min_attendance='')
 
-@app.route('/send_fee_reminder/<fee_id>')
+@app.route('/send_fee_reminder/<fee_id>', methods=['POST'])
 @login_required
+@admin_required
 def send_fee_reminder(fee_id):
     fee = get_from_db('fee', fee_id)
     if not fee:
@@ -2863,7 +3236,7 @@ def send_fee_reminder(fee_id):
 def generate_smart_message():
     """Generate smart, personalized messages"""
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         message_type = data.get('type')
         student_id = data.get('student_id')
         
@@ -2907,7 +3280,7 @@ def generate_smart_message():
 def smart_bulk_notifications():
     """Send smart bulk notifications based on system analysis"""
     try:
-        notification_type = request.json.get('type')
+        notification_type = (request.get_json(silent=True) or {}).get('type')
         
         if notification_type == 'low_attendance':
             # Find students with low attendance
@@ -2961,8 +3334,9 @@ def smart_bulk_notifications():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/send_whatsapp_reminder/<fee_id>')
+@app.route('/send_whatsapp_reminder/<fee_id>', methods=['POST'])
 @login_required
+@admin_required
 def send_whatsapp_reminder(fee_id):
     """Send WhatsApp fee reminder"""
     try:
@@ -3081,6 +3455,7 @@ def send_whatsapp_attendance_alert():
 
 @app.route('/send_bulk_fee_reminders', methods=['POST'])
 @login_required
+@admin_required
 def send_bulk_fee_reminders():
     try:
         # Get all unpaid fees
@@ -3124,6 +3499,7 @@ def send_bulk_fee_reminders():
 
 @app.route('/delete_fee/<fee_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_fee(fee_id):
     try:
         if delete_from_db('fee', fee_id):
@@ -3243,6 +3619,9 @@ def generate_attendance_csv(attendance, date):
 def send_whatsapp_message(phone_number, message, hour=None, minute=None):
     """Send WhatsApp message using pywhatkit"""
     try:
+        if sys.platform != 'win32' and not os.environ.get('DISPLAY'):
+            print("WhatsApp desktop automation is unavailable on this headless server")
+            return False
         # Check if pywhatkit is available
         try:
             import pywhatkit as kit
@@ -3277,6 +3656,9 @@ def send_whatsapp_message(phone_number, message, hour=None, minute=None):
 def send_whatsapp_instant(phone_number, message):
     """Send instant WhatsApp message"""
     try:
+        if sys.platform != 'win32' and not os.environ.get('DISPLAY'):
+            print("WhatsApp desktop automation is unavailable on this headless server")
+            return False
         # Check if pywhatkit is available
         try:
             import pywhatkit as kit
@@ -3302,51 +3684,54 @@ def send_whatsapp_instant(phone_number, message):
 
 # SMS Functions
 def send_infobip_sms(phone_number, message):
-    """Send SMS using Infobip API"""
+    """Send SMS using SMS.net.bd.
+
+    The function name is retained for compatibility with existing callers.
+    """
     try:
-        # Format phone number for international use
-        if phone_number.startswith('01'):
-            phone_number = '+88' + phone_number
-        elif phone_number.startswith('88'):
-            phone_number = '+' + phone_number
-        elif not phone_number.startswith('+'):
-            phone_number = '+88' + phone_number
-
-        url = f"{INFOBIP_BASE_URL}/sms/2/text/advanced"
-
-        headers = {
-            'Authorization': f'App {INFOBIP_API_KEY}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-
-        payload = {
-            "messages": [
-                {
-                    "from": INFOBIP_SENDER,
-                    "destinations": [
-                        {
-                            "to": phone_number
-                        }
-                    ],
-                    "text": message
-                }
-            ]
-        }
-
-        response = requests.post(url, json=payload, headers=headers)
-
-        if response.status_code == 200:
-            result = response.json()
-            print(f"✅ Infobip SMS sent to {phone_number}")
-            print(f"Message ID: {result.get('messages', [{}])[0].get('messageId', 'N/A')}")
-            return True
-        else:
-            print(f"❌ Infobip SMS failed: {response.status_code} - {response.text}")
+        if not SMS_NET_BD_API_KEY or not SMS_NET_BD_SENDER_ID:
+            print("SMS.net.bd is not configured: set SMS_NET_BD_API_KEY and SMS_NET_BD_SENDER_ID")
+            return False
+        if not phone_number or not message:
+            print("SMS.net.bd rejected an empty phone number or message")
             return False
 
-    except Exception as e:
-        print(f"❌ Infobip SMS error: {e}")
+        phone_number = str(phone_number).strip().replace(' ', '')
+        if phone_number.startswith('+'):
+            phone_number = phone_number[1:]
+        if phone_number.startswith('01'):
+            phone_number = '88' + phone_number
+        elif not phone_number.startswith('880'):
+            phone_number = '880' + phone_number.lstrip('0')
+
+        payload = {
+            'api_key': SMS_NET_BD_API_KEY,
+            'msg': message,
+            'to': phone_number,
+            'sender_id': SMS_NET_BD_SENDER_ID
+        }
+        response = requests.post(SMS_NET_BD_URL, data=payload, timeout=15)
+        try:
+            result = response.json()
+        except ValueError:
+            print(f"SMS.net.bd returned a non-JSON response: HTTP {response.status_code}")
+            return False
+
+        if response.ok and result.get('error') == 0:
+            request_id = (result.get('data') or {}).get('request_id', 'N/A')
+            print(f"SMS.net.bd SMS submitted to {phone_number}; request ID: {request_id}")
+            return True
+
+        print(
+            f"SMS.net.bd SMS failed: HTTP {response.status_code} - "
+            f"{result.get('msg', 'Unknown provider error')}"
+        )
+        return False
+    except requests.RequestException as e:
+        print(f"SMS.net.bd request error: {e}")
+        return False
+    except (TypeError, ValueError, AttributeError) as e:
+        print(f"SMS.net.bd response error: {e}")
         return False
 
 @app.route('/view_sms_template/<id>')
@@ -3422,7 +3807,10 @@ def send_sms():
     try:
         template_id = request.form.get('template_id')
         recipient_type = request.form.get('recipient_type')  # 'all', 'class', 'individual'
-        message = request.form.get('message')
+        message = request.form.get('message', '').strip()
+        if not message:
+            flash('Message is required.', 'error')
+            return redirect(url_for('sms_management'))
 
         template = get_from_db('sms_template', template_id) if template_id else None
         recipients = []
@@ -3654,19 +4042,22 @@ def admin_reset_password():
 
     if request.method == 'GET':
         token = request.args.get('token', '')
-        if token != reset_token:
+        if not hmac.compare_digest(token, reset_token):
             return 'Invalid token.', 403
-        return '''
+        session['admin_reset_authorized'] = True
+        response = app.make_response('''
         <form method="POST">
-            <input type="hidden" name="token" value="''' + token + '''">
+            <input type="hidden" name="csrf_token" value="''' + generate_csrf() + '''">
             New Password: <input type="password" name="password" minlength="8" required>
             <button type="submit">Reset</button>
-        </form>'''
+        </form>''')
+        response.headers['Cache-Control'] = 'no-store'
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
 
-    token = request.form.get('token', '')
     new_password = request.form.get('password', '').strip()
-    if token != reset_token or len(new_password) < 8:
-        return 'Invalid token or password too short (min 8 chars).', 400
+    if not session.pop('admin_reset_authorized', False) or len(new_password) < 8:
+        return 'Invalid reset session or password too short (min 8 chars).', 400
 
     admins = get_from_db('admin')
     if not admins:
@@ -3681,6 +4072,8 @@ def admin_reset_password():
 
 # Initialize database and create admin user if it hasn't been initialized yet
 def init_app():
+    if getattr(app, '_initialized', False):
+        return
     print("[INIT_APP] Starting init_app() function")
 
     # ALWAYS check for legacy admin migration (regardless of initialization flag)
@@ -3696,11 +4089,13 @@ def init_app():
         legacy_admin = admins[0]
         print(f"[INIT_APP] First admin username: '{legacy_admin.get('username')}'")
         
-        # Migrate legacy admin with username '7' to 'admin'
+        # Migrate the legacy username without changing its password.
         if legacy_admin.get('username') == '7':
             print(f"[INIT_APP] MIGRATING legacy admin from '7' to 'admin'")
             legacy_admin['username'] = 'admin'
-            legacy_admin['password_hash'] = generate_password_hash('password123')
+            configured_password = os.environ.get('ADMIN_PASSWORD')
+            if configured_password:
+                legacy_admin['password_hash'] = generate_password_hash(configured_password)
             update_in_db('admin', legacy_admin['id'], legacy_admin)
             print(f"[INIT_APP] [OK] Successfully migrated admin to username: admin")
             # Clear cache to ensure new username is used
@@ -3721,19 +4116,17 @@ def init_app():
         admins = get_from_db('admin')
         if not admins:
             import secrets
-            import string
             admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
-            admin_password = os.environ.get('ADMIN_PASSWORD') or secrets.token_urlsafe(12)
+            admin_password = os.environ.get('ADMIN_PASSWORD')
+            if not admin_password and os.environ.get('FLASK_ENV', 'production').lower() == 'production':
+                raise RuntimeError('ADMIN_PASSWORD must be configured before creating the first admin')
+            admin_password = admin_password or secrets.token_urlsafe(12)
             admin = Admin()
             admin.username = admin_username
             admin.email = os.environ.get('ADMIN_EMAIL', 'admin@school.com')
             admin.password_hash = generate_password_hash(admin_password)
             admin.save()
-            print(f"[INIT_APP] ========================================")
-            print(f"[INIT_APP] Admin credentials created automatically:")
-            print(f"[INIT_APP]   Username : {admin_username}")
-            print(f"[INIT_APP]   Password : {admin_password}")
-            print(f"[INIT_APP] ========================================")
+            print("[INIT_APP] Admin account created. Use the configured ADMIN_PASSWORD or reset it securely.")
 
             # Create default teachers
             default_teachers = [
@@ -3811,6 +4204,7 @@ def init_app():
                         ('metadata', 'initialized', json.dumps(True))
                     )
                 conn.commit()
+    app._initialized = True
 
 @app.route('/smart_search')
 @login_required
@@ -3937,7 +4331,7 @@ def get_notifications():
                         sent_date = datetime.fromisoformat(sent_at)
                         if (datetime.now() - sent_date).days <= 1:
                             failed_sms.append(s)
-                except:
+                except (TypeError, ValueError):
                     continue
         
         if len(failed_sms) > 0:
@@ -4009,6 +4403,7 @@ def check_class_deletion(class_id):
 
 @app.route('/class_schedule')
 @login_required
+@admin_required
 def class_schedule():
     """Class schedule management page"""
     try:
@@ -4114,6 +4509,7 @@ def class_schedule():
 
 @app.route('/add_schedule', methods=['POST'])
 @login_required
+@admin_required
 def add_schedule():
     """Add new schedule entry"""
     try:
@@ -4148,7 +4544,10 @@ def add_schedule():
         schedule_data = {
             'class_id': class_id,
             'day_of_week': day_of_week,
+            'day': day_of_week,
             'time_slot': time_slot,
+            'start_time': time_slot.split('-', 1)[0].strip() if '-' in time_slot else time_slot,
+            'end_time': time_slot.split('-', 1)[1].strip() if '-' in time_slot else '',
             'subject': subject,
             'teacher_id': teacher_id,
             'room_number': room_number,
@@ -4168,6 +4567,7 @@ def add_schedule():
 
 @app.route('/edit_schedule/<schedule_id>', methods=['POST'])
 @login_required
+@admin_required
 def edit_schedule(schedule_id):
     """Edit existing schedule"""
     try:
@@ -4208,6 +4608,7 @@ def edit_schedule(schedule_id):
 
 @app.route('/delete_schedule/<schedule_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_schedule(schedule_id):
     """Delete schedule entry"""
     try:
@@ -4297,6 +4698,7 @@ def teacher_schedule(teacher_id):
 
 @app.route('/update_period', methods=['POST'])
 @login_required
+@admin_required
 def update_period():
     """Update or add a period to the schedule"""
     try:
@@ -4660,6 +5062,7 @@ def admin_create_guardian_user():
 @admin_required
 def delete_teacher_user(user_id):
     delete_from_db('teacher_user', user_id)
+    _user_cache.pop(f'teacher_{user_id}', None)
     flash('শিক্ষক ব্যবহারকারী মুছে ফেলা হয়েছে।', 'success')
     return redirect(url_for('admin_users'))
 
@@ -4669,6 +5072,7 @@ def delete_teacher_user(user_id):
 @admin_required
 def delete_guardian_user(user_id):
     delete_from_db('guardian_user', user_id)
+    _user_cache.pop(f'guardian_{user_id}', None)
     flash('অভিভাবক ব্যবহারকারী মুছে ফেলা হয়েছে।', 'success')
     return redirect(url_for('admin_users'))
 
@@ -4712,6 +5116,7 @@ def update_guardian_user(user_id):
 
     data['updated_at'] = datetime.now(timezone.utc).isoformat()
     update_in_db('guardian_user', user_id, data)
+    _user_cache.pop(f'guardian_{user_id}', None)
     flash(f'অভিভাবক "{data.get("username")}" এর তথ্য সফলভাবে আপডেট হয়েছে।', 'success')
     return redirect(url_for('admin_users'))
 
@@ -4837,8 +5242,8 @@ def teacher_dashboard():
         schedules = get_from_db('schedule') or []
         today_schedules = [s for s in schedules
                           if s.get('teacher_id') == current_user.teacher_id
-                          and s.get('day') == today_weekday]
-        today_schedules.sort(key=lambda x: x.get('start_time', ''))
+                          and schedule_day(s) == today_weekday]
+        today_schedules.sort(key=lambda x: schedule_times(x)[0])
 
         # Get class sessions for today (real-time tracking)
         today_sessions = query_db('class_session', date=today) or []
@@ -4976,11 +5381,17 @@ def teacher_mark_attendance():
         flash('এই ক্লাসে আপনার অনুমতি নেই।', 'error')
         return redirect(url_for('teacher_attendance_view', date=date or '', class_id=''))
 
+    class_students = {
+        student.get('id')
+        for student in query_db('student', class_id=class_id, is_active=True)
+    }
     marked = 0
     updated = 0
     for key, status in request.form.items():
         if key.startswith('student_'):
             student_id = key.replace('student_', '')
+            if student_id not in class_students:
+                continue
             if status not in ['Present', 'Absent', 'Late']:
                 continue
             existing = query_db('attendance', student_id=student_id, date=date) or []
@@ -5121,6 +5532,12 @@ def create_homework():
     if not data['title'] or not data['class_id']:
         flash('শিরোনাম এবং ক্লাস নির্বাচন করুন।', 'error')
         return redirect(url_for('teacher_homework'))
+    if data['class_id'] not in teacher_class_ids(current_user.teacher_id):
+        flash('এই ক্লাসে আপনার অনুমতি নেই।', 'error')
+        return redirect(url_for('teacher_homework'))
+    if not data['due_date']:
+        flash('জমাদানের তারিখ নির্বাচন করুন।', 'error')
+        return redirect(url_for('teacher_homework'))
     save_to_db('homework', data)
     flash('হোমওয়ার্ক যোগ করা হয়েছে।', 'success')
     return redirect(url_for('teacher_homework'))
@@ -5189,11 +5606,20 @@ def teacher_notices():
 @teacher_required
 def teacher_create_notice():
     profile = current_user.get_teacher_profile() or {}
+    title = request.form.get('title', '').strip()
+    body = request.form.get('body', '').strip()
+    class_id = request.form.get('class_id', '')
+    if not title or not body:
+        flash('নোটিশের শিরোনাম ও বার্তা উভয়ই প্রয়োজন।', 'error')
+        return redirect(url_for('teacher_notices'))
+    if not class_id or class_id not in teacher_class_ids(current_user.teacher_id):
+        flash('এই ক্লাসে আপনার অনুমতি নেই।', 'error')
+        return redirect(url_for('teacher_notices'))
     data = {
-        'title': request.form.get('title', '').strip(),
-        'body': request.form.get('body', '').strip(),
+        'title': title,
+        'body': body,
         'target_role': 'guardian',
-        'target_class_id': request.form.get('class_id', ''),
+        'target_class_id': class_id,
         'created_by': current_user.id,
         'created_by_name': profile.get('name', current_user.username),
         'created_by_role': 'teacher',
@@ -5237,6 +5663,14 @@ def teacher_send_message():
     body = request.form.get('body', '').strip()
     if not to_id or not body:
         flash('প্রাপক এবং বার্তা উভয়ই প্রয়োজন।', 'error')
+        return redirect(url_for('teacher_messages'))
+    guardian = get_from_db('guardian_user', to_id.replace('guardian_', ''))
+    teacher_classes = teacher_class_ids(current_user.teacher_id)
+    guardian_students = guardian.get('student_ids', []) if guardian else []
+    if not guardian or not any(
+            (get_from_db('student', student_id) or {}).get('class_id') in teacher_classes
+            for student_id in guardian_students):
+        flash('এই অভিভাবকের সাথে যোগাযোগের অনুমতি নেই।', 'error')
         return redirect(url_for('teacher_messages'))
     profile = current_user.get_teacher_profile() or {}
     save_to_db('message', {
@@ -5301,8 +5735,8 @@ def teacher_routine():
     days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     routine_by_day = {}
     for day in days:
-        day_schedules = sorted([s for s in my_schedules if s.get('day') == day],
-                               key=lambda x: x.get('start_time', ''))
+        day_schedules = sorted([s for s in my_schedules if schedule_day(s) == day],
+                               key=lambda x: schedule_times(x)[0])
         if day_schedules:
             routine_by_day[day] = day_schedules
 
@@ -5429,8 +5863,8 @@ def guardian_class_tracker():
         # Get today's schedule for this class
         schedules = get_from_db('schedule') or []
         today_schedules = [s for s in schedules
-                          if s.get('class_id') == class_id and s.get('day') == today_weekday]
-        today_schedules.sort(key=lambda x: x.get('start_time', ''))
+                              if s.get('class_id') == class_id and schedule_day(s) == today_weekday]
+        today_schedules.sort(key=lambda x: schedule_times(x)[0])
 
         # Get class sessions for today
         today_sessions = query_db('class_session', date=today) or []
@@ -5498,8 +5932,8 @@ def guardian_class_tracker_api():
 
     schedules = get_from_db('schedule') or []
     today_schedules = [s for s in schedules
-                      if s.get('class_id') == class_id and s.get('day') == today_weekday]
-    today_schedules.sort(key=lambda x: x.get('start_time', ''))
+                      if s.get('class_id') == class_id and schedule_day(s) == today_weekday]
+    today_schedules.sort(key=lambda x: schedule_times(x)[0])
 
     today_sessions = query_db('class_session', date=today) or []
     sessions_map = {s.get('schedule_id'): s for s in today_sessions}
@@ -5511,8 +5945,8 @@ def guardian_class_tracker_api():
         result.append({
             'id': sch.get('id'),
             'subject': sch.get('subject', ''),
-            'start_time': sch.get('start_time', ''),
-            'end_time': sch.get('end_time', ''),
+            'start_time': schedule_times(sch)[0],
+            'end_time': schedule_times(sch)[1],
             'teacher_name': teacher.get('name', 'N/A') if teacher else 'N/A',
             'status': session.get('status', 'upcoming') if session else 'upcoming',
             'note': session.get('note', '') if session else '',
@@ -5560,9 +5994,11 @@ def guardian_attendance():
     month_param = request.args.get('month', datetime.now().strftime('%Y-%m'))
     try:
         year, month = map(int, month_param.split('-'))
-    except:
+    except (TypeError, ValueError):
         year, month = datetime.now().year, datetime.now().month
 
+    if not 1 <= month <= 12:
+        year, month = datetime.now().year, datetime.now().month
     month_label = datetime(year, month, 1).strftime('%B %Y')
 
     student_att = query_db('attendance', student_id=active_student.get('id'))
@@ -5809,4 +6245,6 @@ if __name__ == '__main__':
     print(f"Running on: http://0.0.0.0:{port}")
     print("="*70 + "\n")
     app.run(host='0.0.0.0', port=port, debug=False)
-
+else:
+    # Ensure direct WSGI targets such as ``gunicorn main:app`` are initialized.
+    init_app()

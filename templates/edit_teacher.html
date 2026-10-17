@@ -15,7 +15,7 @@
                     <div class="col-md-4 text-center mb-4">
                         <div id="photoPreview" class="mb-3">
                             {% if has_photo %}
-                                <img id="photoImg" src="/get_photo/teacher/{{ teacher.id }}" alt="Teacher Photo" class="img-fluid rounded" style="max-width: 200px; height: 200px; object-fit: cover;">
+                                <img id="photoImg" loading="lazy" decoding="async" width="200" height="200" src="/get_photo/teacher/{{ teacher.id }}" alt="Teacher Photo" class="img-fluid rounded" style="max-width: 200px; height: 200px; object-fit: cover;">
                             {% else %}
                                 <img id="photoImg" src="/static/placeholder.png" alt="No Photo" class="img-fluid rounded" style="max-width: 200px; height: 200px; object-fit: cover;">
                             {% endif %}
