@@ -7,18 +7,15 @@ import sys
 # Ensure current directory is in path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Import Flask app and initialization
-from main import app, init_app, get_from_db
+# Import the already initialized Flask application.
+from main import app, get_from_db
 
 print("[APP] Starting Flask application...")
 print(f"[APP] DATABASE_URL: {'SET' if os.environ.get('DATABASE_URL') else 'NOT SET'}")
 
-# Initialize database and create default admin
+# `main` initializes the application once during import. Avoid running the
+# database initialization a second time in every Gunicorn worker.
 try:
-    print("[APP] Calling init_app()...")
-    init_app()
-    print("[APP] init_app() completed successfully")
-    
     # Verify admin was created
     admins = get_from_db('admin')
     if isinstance(admins, list):
